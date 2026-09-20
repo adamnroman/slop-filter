@@ -13,8 +13,7 @@ Pick the section that matches what the user asked for. For anything deeper, read
 
 Chrome does not let a script install an extension. You do the file work, then walk the user through the clicks one step at a time and wait for them to confirm each one.
 
-1. Clone the repo. Put it wherever fits the user's machine. If they already have a clone, run `git pull` in it instead.
-   - The location is permanent. Chrome ties an unpacked extension to its folder path, so moving or renaming the folder later makes Chrome treat it as a new extension and drop the saved API key, settings, and labels. Do not use a temp directory.
+1. Clone the repo into a new directory inside your current directory. If a clone is already there, run `git pull` in it instead.
 2. If Node 20 or newer is installed, run `node --test` in the folder. Tell the user if anything fails. If Node is missing, skip this.
 3. Walk the user through Chrome:
    1. Open `chrome://extensions`.
