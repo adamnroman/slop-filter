@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Slop Filter",
-  "version": "0.6.4.5",
-  "description": "Hides AI-generated posts on X and LinkedIn, scored by TypeSafe Jev.",
+  "version": "0.6.4.6",
+  "description": "Hides AI-generated posts on X, LinkedIn, and Reddit. Scored by TypeSafe Jev.",
   "icons": {
     "16": "assets/icons/icon-16.png",
     "32": "assets/icons/icon-32.png",
@@ -53,6 +53,23 @@
       "css": [
         "src/content.css",
         "src/sites/linkedin.css",
+        "src/stats-panel.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.reddit.com/*"
+      ],
+      "js": [
+        "src/constants.js",
+        "src/dom-text.js",
+        "src/sites/reddit.js",
+        "src/stats-panel.js",
+        "src/content.js"
+      ],
+      "css": [
+        "src/content.css",
         "src/stats-panel.css"
       ],
       "run_at": "document_idle"

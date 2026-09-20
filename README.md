@@ -1,6 +1,6 @@
 # Slop Filter
 
-A Chrome extension that hides AI-generated posts. It works on X and LinkedIn today. Reddit and YouTube are next.
+A Chrome extension that hides AI-generated posts. It works on X, LinkedIn, and Reddit today. YouTube is next.
 
 ![Slop Filter scanning posts on X and LinkedIn: a scan line runs over each post, then it turns green and stays or red and folds away, while a side panel counts posts scanned, slop caught, request time, and cost.](docs/demo.gif)
 

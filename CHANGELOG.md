@@ -11,6 +11,7 @@ Every release of Slop Filter. The format follows [Keep a Changelog](https://keep
 
 ### Added
 
+- Reddit support: feed posts, opened posts, and comments on www.reddit.com. A flagged comment folds its own text and leaves its replies visible.
 - A demo clip at the top of the README.
 - A tell for the insight reframe: "the hard part is...", "the real work is...", "what most people miss...". It runs on every post and carries a heavy starting weight.
 - Hover a post's percentage to see why it got that score: each check's pull, strongest first, and any reply-only questions that were not asked.
