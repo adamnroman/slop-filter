@@ -1,0 +1,125 @@
+/* State is in data attributes, not classes: X rewrites the tweet's class list on hover. */
+article[data-xaf-hide="collapse"] > :not(.xaf-bar) {
+  display: none !important;
+}
+
+article[data-xaf-hide="dim"] > :not(.xaf-bar) {
+  opacity: 0.25;
+}
+
+/* X lays the article out as a flex row. Wrapping puts the bar on its own line. */
+article:has(> .xaf-bar) {
+  flex-wrap: wrap;
+}
+
+.xaf-bar {
+  flex: 0 0 100%;
+  box-sizing: border-box;
+  /* Same height empty or full, so a reserved bar never resizes the tweet. */
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 4px 16px;
+  font: 12px/16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: rgb(113, 118, 123);
+}
+
+.xaf-bar.xaf-flagged {
+  justify-content: flex-start;
+  color: rgb(244, 93, 34);
+}
+
+.xaf-bar.xaf-error {
+  font-family: ui-monospace, Menlo, monospace;
+  color: rgb(255, 173, 31);
+}
+
+.xaf-button {
+  padding: 1px 8px;
+  border: 1px solid currentColor;
+  border-radius: 9999px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.xaf-button:hover,
+.xaf-button.xaf-active {
+  background: rgba(113, 118, 123, 0.2);
+}
+
+/* Animated mode: a scan line bounces while Jev decides, then green (pass) or
+   red (fail) fades in. Failed tweets then close in on themselves. */
+article[data-xaf-animating] {
+  --xaf-scan: rgb(120, 200, 255);
+  --xaf-pass: rgba(0, 186, 124, 0.42);
+  --xaf-pass-edge: rgb(0, 230, 150);
+  --xaf-fail: rgba(244, 33, 46, 0.62);
+  --xaf-fail-edge: rgb(255, 72, 84);
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* The strip is only the trail: a gradient that is clear at the far end and brightest
+   next to the line. It has no border or shadow of its own. A shadow on the strip
+   glows around all four edges, and the far edge then shows up as a second line.
+
+   Going down: shifted up by its own height, so `top` is where the line sits and the
+   trail fades upward behind it. */
+.xaf-scanline {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 96px;
+  transform: translateY(-100%);
+  pointer-events: none;
+  background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--xaf-scan) 42%, transparent));
+}
+
+/* The one bright line, on the leading edge. The glow belongs to the line alone. */
+.xaf-scanline::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--xaf-scan);
+  box-shadow: 0 0 18px var(--xaf-scan);
+}
+
+/* Going up: mirrored. `top` is the line and the trail fades downward behind it. */
+.xaf-scanline.xaf-scan-up {
+  transform: none;
+  background: linear-gradient(to top, transparent, color-mix(in srgb, var(--xaf-scan) 42%, transparent));
+}
+
+.xaf-scanline.xaf-scan-up::after {
+  top: 0;
+  bottom: auto;
+}
+
+/* The verdict covers the whole tweet and fades in. */
+.xaf-fill {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  pointer-events: none;
+  background: var(--xaf-verdict);
+  box-shadow: inset 0 0 0 2px var(--xaf-verdict-edge);
+}
+
+.xaf-fill.xaf-pass {
+  --xaf-verdict: var(--xaf-pass);
+  --xaf-verdict-edge: var(--xaf-pass-edge);
+}
+
+.xaf-fill.xaf-fail {
+  --xaf-verdict: var(--xaf-fail);
+  --xaf-verdict-edge: var(--xaf-fail-edge);
+}

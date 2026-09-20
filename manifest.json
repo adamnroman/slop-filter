@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "X AI Filter",
+  "version": "0.5.1",
+  "description": "Hides tweets on x.com that are likely AI-generated, scored by TypeSafe Jev.",
+  "permissions": ["storage"],
+  "host_permissions": ["https://api.typesafe.ai/*"],
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://x.com/*", "https://twitter.com/*"],
+      "js": ["src/constants.js", "src/content.js"],
+      "css": ["src/content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  }
+}

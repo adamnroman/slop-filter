@@ -1,0 +1,11 @@
+{
+  "name": "x-ai-filter",
+  "version": "0.5.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "try": "node scripts/try.mjs",
+    "fit": "node scripts/fit.mjs",
+    "test": "node --test"
+  }
+}
