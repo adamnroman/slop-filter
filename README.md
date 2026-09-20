@@ -33,4 +33,8 @@ Or do it by hand: clone this repo, open `chrome://extensions`, turn on Developer
 
 ## Tune it and contribute
 
-[SKILL.md](SKILL.md) teaches your coding agent how to update it, add a tell you noticed, fit the weights from your labels, and add a site. [docs/development.md](docs/development.md) has the full detail.
+[SKILL.md](SKILL.md) teaches your coding agent how to update it, add a tell you noticed, fit the weights from your labels, and add a site. [docs/development.md](docs/development.md) has the full detail. To send a change back, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+[MIT](LICENSE). The bundled Fredoka font is under the SIL Open Font License.
