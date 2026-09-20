@@ -6,6 +6,7 @@ import {
   JEV_MODEL,
   buildQuestions,
   buildState,
+  explain,
   featureVector,
   probability,
   requestCostUsd,
@@ -16,7 +17,7 @@ const { MSG, STORE } = globalThis.XAF;
 const MAX_IN_FLIGHT = 6;
 const ERROR_NO_KEY = 'No API key set. Open the extension options.';
 
-// Post id -> promise of { features, usage }. Holding the promise dedupes concurrent asks.
+// Post id -> promise of { features, asked, usage }. Holding the promise dedupes concurrent asks.
 const featureCache = new Map();
 
 let inFlight = 0;
@@ -48,6 +49,7 @@ async function fetchFeatures(post) {
   const inputTokens = response.usage?.input_tokens ?? 0;
   return {
     features: featureVector(response.answers, post),
+    asked: Object.keys(questions),
     usage: {
       inputTokens,
       costUsd: requestCostUsd(inputTokens),
@@ -70,11 +72,13 @@ function cachedFeatures(post) {
 // `usage` is null when the answer came from the cache, so nothing is counted twice.
 async function classify(post) {
   const isFresh = !featureCache.has(post.id);
-  const { features, usage } = await cachedFeatures(post);
-  const { [STORE.WEIGHTS]: weights } = await chrome.storage.local.get(STORE.WEIGHTS);
+  const { features, asked, usage } = await cachedFeatures(post);
+  const { [STORE.WEIGHTS]: stored } = await chrome.storage.local.get(STORE.WEIGHTS);
+  const weights = stored ?? DEFAULT_WEIGHTS;
   return {
     features,
-    p: probability(features, weights ?? DEFAULT_WEIGHTS),
+    p: probability(features, weights),
+    why: explain(features, weights, asked),
     usage: isFresh ? usage : null,
   };
 }

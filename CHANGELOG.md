@@ -10,6 +10,7 @@ Every release of Slop Filter. The format follows [Keep a Changelog](https://keep
 
 ### Added
 
+- Hover a post's percentage to see why it got that score: each check's pull, strongest first, and any reply-only questions that were not asked.
 - Live stats panel for demos: posts scanned, slop caught, last and average request time, questions answered, tokens, total cost, and cost per 1,000 posts. Off by default, on the options page.
 
 ## [0.6.4] - 2026-09-20

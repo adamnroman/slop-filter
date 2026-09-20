@@ -6,6 +6,7 @@ import {
   QUESTIONS,
   buildQuestions,
   buildState,
+  explain,
   featureVector,
   probability,
   requestCostUsd,
@@ -69,6 +70,19 @@ test('cost is input tokens at the per-million price', () => {
   assert.equal(requestCostUsd(0), 0);
   assert.ok(Math.abs(requestCostUsd(1_000_000) - 0.042) < 1e-12);
   assert.ok(Math.abs(requestCostUsd(1000) * 1000 - 0.042) < 1e-9, 'about 4 cents per 1,000 posts of 1k tokens');
+});
+
+test('explain lists each pull, strongest first, and marks questions that were not asked', () => {
+  const post = { text: 'plain text here' };
+  const features = featureVector({ holistic_ai: { noul: 0.8 }, rule_of_three: { noul: 0.2 } }, post);
+  const { bias, rows } = explain(features, DEFAULT_WEIGHTS, Object.keys(buildQuestions(post)));
+  assert.equal(bias, DEFAULT_WEIGHTS.bias);
+  assert.equal(rows[0].id, 'holistic_ai');
+  assert.ok(Math.abs(rows[0].contribution - 0.8 * DEFAULT_WEIGHTS.w.holistic_ai) < 1e-9);
+  const total = rows.reduce((sum, row) => sum + row.contribution, bias);
+  assert.ok(Math.abs(1 / (1 + Math.exp(-total)) - probability(features)) < 1e-9, 'the pulls add up to the score');
+  assert.equal(rows.find((row) => row.id === 'generic_lesson').asked, false);
+  assert.equal(rows.find((row) => row.id === 'em_dash').asked, true);
 });
 
 test('default weights separate the extremes', () => {

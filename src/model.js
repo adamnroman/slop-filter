@@ -204,6 +204,19 @@ export function featureVector(answers, post) {
   return features;
 }
 
+// Why a post got its score: every feature's pull on it, strongest first.
+// `askedIds` are the questions that were sent. A reply-only question that was not sent
+// reads as 0, and the breakdown says so instead of showing it as a "no".
+export function explain(features, weights = DEFAULT_WEIGHTS, askedIds = Object.keys(QUESTIONS)) {
+  const asked = new Set(askedIds);
+  const rows = Object.entries(features).map(([id, value]) => {
+    const weight = weights.w[id] ?? 0;
+    return { id, value, weight, contribution: weight * value, asked: !(id in QUESTIONS) || asked.has(id) };
+  });
+  rows.sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution));
+  return { bias: weights.bias, rows };
+}
+
 export function sigmoid(z) {
   return 1 / (1 + Math.exp(-z));
 }

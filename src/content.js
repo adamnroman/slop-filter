@@ -36,6 +36,7 @@
     LABEL_HUMAN: 'Human',
     LABEL_PROMPT: 'Label:',
     UPSTREAM_ERROR: 'Upstream API error',
+    WHY_NOT_ASKED: 'not asked, the post it replies to is unknown:',
   });
   const SETTING_KEYS = [STORE.THRESHOLD, STORE.MODE, STORE.LABELING, STORE.STATS];
   // Animated mode ends in the same collapsed state as collapse mode.
@@ -104,6 +105,28 @@
     return el;
   }
 
+  // Contributions smaller than this are left out of the hover breakdown.
+  const WHY_MIN_PULL = 0.05;
+
+  // Hover text for the score: what pushed it up or down, strongest first.
+  function whyText(result, percent) {
+    if (!result.why) return '';
+    const { bias, rows } = result.why;
+    const signed = (n) => `${n < 0 ? '-' : '+'}${Math.abs(n).toFixed(2)}`;
+    const pulls = rows
+      .filter((row) => row.asked && Math.abs(row.contribution) >= WHY_MIN_PULL)
+      .map((row) => `${signed(row.contribution)}  ${row.id}  (answer ${row.value.toFixed(2)} x weight ${row.weight})`);
+    const skipped = rows.filter((row) => !row.asked).map((row) => row.id);
+    return [
+      `Why ${percent}%`,
+      `${signed(bias)}  starting point`,
+      ...pulls,
+      skipped.length ? `${TEXT.WHY_NOT_ASKED} ${skipped.join(', ')}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+  }
+
   function buildBar(element, post, result, isFlagged, isHidden) {
     const bar = document.createElement('div');
     bar.className = CLASS.BAR;
@@ -114,6 +137,7 @@
     const percent = Math.round(result.p * 100);
     const summary = document.createElement('span');
     summary.textContent = isFlagged ? `Likely AI · ${percent}%` : `AI ${percent}%`;
+    summary.title = whyText(result, percent);
     bar.append(summary);
 
     if (isFlagged && settings.mode !== MODE.BADGE) {
