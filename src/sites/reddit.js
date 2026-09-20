@@ -16,8 +16,7 @@
 //
 // This markup was taken from other open source Reddit extensions, not inspected live.
 // If scores stop showing up, check these selectors first. The meta area comes from other
-// extensions' code on GitHub: a copy of Pangram's AI detector (spotdemo4/pangram-chrome,
-// which appends its badge to it), Reddit++ (lnm95/redditPlusPlus), RedditEnhancer
+// open source extensions on GitHub: Reddit++ (lnm95/redditPlusPlus), RedditEnhancer
 // (joelacus/RedditEnhancer), and the user styles in Procyon-b/userCSS-userScript and
 // pnlpal/pnl-reader.
 (() => {
