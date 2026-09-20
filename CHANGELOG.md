@@ -4,6 +4,12 @@ Every release of Slop Filter. The format follows [Keep a Changelog](https://keep
 
 ## [Unreleased]
 
+## [0.6.4] - 2026-09-20
+
+### Changed
+
+- New extension icon.
+
 ## [0.6.3] - 2026-09-20
 
 ### Added
@@ -67,7 +73,8 @@ The first version in this repository. Versions 0.1.0 to 0.5.0 were development b
 - Retries with exponential backoff, then an `Upstream API error` line in the bar in place of the score.
 - An options page with the API key, threshold, flag mode, weights, a Reload extension button, and a warning when Chrome is running older code than the files on disk.
 
-[Unreleased]: https://github.com/adamnroman/slop-filter/compare/v0.6.3...HEAD
+[Unreleased]: https://github.com/adamnroman/slop-filter/compare/v0.6.4...HEAD
+[0.6.4]: https://github.com/adamnroman/slop-filter/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/adamnroman/slop-filter/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/adamnroman/slop-filter/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/adamnroman/slop-filter/compare/v0.6.0...v0.6.1
