@@ -65,6 +65,25 @@ export const QUESTIONS = Object.freeze({
     instructions:
       "Does `post.text` announce news with stock emotional framing, such as 'I'm thrilled to announce', 'Excited to share', or 'Humbled and honored'?",
   },
+  empty_qualifiers: {
+    type: TYPE.NOUL,
+    instructions:
+      "Does `post.text` use an emphasis word such as 'real', 'true', 'truly', 'genuinely', 'actually', or 'fundamentally' that adds no meaning, because the text never mentions a false or lesser version to contrast it with?",
+    criteria: {
+      true: "An emphasis word could be deleted with no change in meaning. Example: 'the real lesson' when no other lesson was mentioned, or 'the real operating work' when no fake work was mentioned.",
+      false: "No such emphasis word, or each one marks an actual contrast. Example: 'the quoted price was $10 but the real price was $14', or fixed terms like 'real estate' and 'real-time'.",
+    },
+  },
+  generic_lesson: {
+    type: TYPE.NOUL,
+    needsParent: true,
+    instructions:
+      "Does `post.text` turn `parent.text` into a general lesson that would fit as a reply to almost any post on a similar topic, such as 'a good reminder that...', 'the real lesson here is...', or 'the harder part is...'?",
+    criteria: {
+      true: 'It states a broad takeaway about business, work, or life and does not engage with the specific facts, numbers, or claims in `parent.text`.',
+      false: 'It responds to something specific in `parent.text`: a fact, a number, a named person or company, a claim it agrees or disagrees with, or a question it asks about it.',
+    },
+  },
   restates_parent: {
     type: TYPE.NOUL,
     needsParent: true,
@@ -108,6 +127,23 @@ export const QUESTIONS = Object.freeze({
   },
 });
 
+// Adverbs that pad chatbot writing and are rare in casual human posts. Casual fillers
+// people do type ('really', 'actually', 'literally', 'just') are left out on purpose.
+const FILLER_ADVERBS = new Set([
+  'truly', 'genuinely', 'fundamentally', 'ultimately', 'inherently', 'essentially',
+  'incredibly', 'remarkably', 'profoundly', 'deeply', 'undoubtedly', 'seamlessly',
+  'effortlessly', 'meticulously', 'notably', 'importantly', 'crucially',
+]);
+// One filler adverb per this many words is already the maximum.
+const FILLER_SATURATION_WORDS = 20;
+
+function fillerAdverbRate(text) {
+  const words = text.toLowerCase().match(/[a-z']+/g) ?? [];
+  if (!words.length) return 0;
+  const hits = words.filter((word) => FILLER_ADVERBS.has(word)).length;
+  return Math.min(1, (hits / words.length) * FILLER_SATURATION_WORDS);
+}
+
 // Patterns code can detect exactly stay in code.
 const CODE_FEATURES = Object.freeze({
   em_dash: (text) => (text.includes('—') ? 1 : 0),
@@ -116,6 +152,7 @@ const CODE_FEATURES = Object.freeze({
   emoji_bullets: (text) => ((text.match(/^\s*\p{Extended_Pictographic}/gmu) ?? []).length >= 3 ? 1 : 0),
   // Three or more hashtags stacked at the end of the post.
   hashtag_pile: (text) => (/(#[\p{L}\p{N}_]+\s*){3,}$/u.test(text.trim()) ? 1 : 0),
+  filler_adverbs: fillerAdverbRate,
 });
 
 // Hand-set starting point. Replace with the output of scripts/fit.mjs once labels exist.
@@ -132,6 +169,8 @@ export const DEFAULT_WEIGHTS = Object.freeze({
     mini_essay_format: 0.6,
     balanced_stance: 0.5,
     announcement_hype: 0.8,
+    empty_qualifiers: 0.8,
+    generic_lesson: 1.2,
     restates_parent: 1.0,
     ignores_parent_detail: 1.0,
     generic_content: 1.5,
@@ -141,6 +180,7 @@ export const DEFAULT_WEIGHTS = Object.freeze({
     all_lowercase: -1.0,
     emoji_bullets: 0.6,
     hashtag_pile: 0.4,
+    filler_adverbs: 0.6,
   }),
 });
 
