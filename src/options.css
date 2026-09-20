@@ -1,0 +1,440 @@
+/* Fredoka, SIL OFL 1.1. License: assets/fonts/fredoka-OFL.txt */
+@font-face {
+  font-family: 'Fredoka';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('../assets/fonts/fredoka-latin.woff2') format('woff2');
+}
+
+/* Palette: background, surface, text, one accent, one danger. Everything else is mixed from these. */
+:root {
+  color-scheme: light dark;
+
+  --bg: #fff3d6;
+  --surface: #ffffff;
+  --text: #231f33;
+  --accent: #6247ea;
+  --danger: #d7263d;
+  --on-fill: var(--surface);
+  --eye: var(--surface);
+  --pupil: var(--text);
+
+  --line: var(--text);
+  --muted: color-mix(in srgb, var(--text) 70%, var(--surface));
+  --track: color-mix(in srgb, var(--text) 16%, var(--surface));
+  --danger-tint: color-mix(in srgb, var(--danger) 10%, var(--surface));
+
+  --font-ui: 'Fredoka', ui-rounded, 'Arial Rounded MT Bold', system-ui, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --border: 2px;
+  --radius: 12px;
+  --radius-card: 18px;
+  --control-height: 44px;
+  --thumb: 26px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16141f;
+    --surface: #232031;
+    --text: #f7f1e3;
+    --accent: #a897ff;
+    --danger: #ff7a87;
+    --on-fill: var(--bg);
+    --eye: var(--text);
+    --pupil: var(--bg);
+
+    --line: color-mix(in srgb, var(--text) 45%, var(--surface));
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 400 16px/1.45 var(--font-ui);
+}
+
+.page {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4) 64px;
+  display: grid;
+  gap: var(--space-5);
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+h2 {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+a {
+  color: var(--accent);
+  text-underline-offset: 3px;
+}
+
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+a.hint {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* Header */
+
+.masthead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.mascot {
+  width: 48px;
+  height: 48px;
+  flex: none;
+}
+
+.mascot-body {
+  fill: var(--accent);
+  stroke: var(--line);
+  stroke-width: 2;
+}
+
+.mascot-eye {
+  fill: var(--eye);
+}
+
+.mascot-pupil {
+  fill: var(--pupil);
+}
+
+.mascot-mouth {
+  fill: none;
+  stroke: var(--on-fill);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+
+.pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border: var(--border) solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
+.pill:empty {
+  display: none;
+}
+
+.pill-accent {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-fill);
+}
+
+/* Stale version warning */
+
+.banner {
+  padding: var(--space-3) var(--space-4);
+  border: var(--border) solid var(--danger);
+  border-radius: var(--radius);
+  background: var(--danger-tint);
+}
+
+.banner strong {
+  display: block;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+/* Cards and fields */
+
+.card {
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--space-5);
+  border: var(--border) solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.card-small {
+  gap: var(--space-3);
+}
+
+.field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.field-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+}
+
+label,
+summary {
+  font-weight: 500;
+}
+
+input[type='password'],
+select,
+textarea {
+  width: 100%;
+  min-height: var(--control-height);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border) solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+textarea {
+  display: block;
+  min-height: 140px;
+  max-height: 360px;
+  field-sizing: content;
+  resize: vertical;
+  font: 13px/1.5 var(--font-mono);
+}
+
+/* Select: native control, custom arrow drawn with borders so it follows the palette. */
+
+.select {
+  position: relative;
+}
+
+.select select {
+  appearance: none;
+  padding-right: 44px;
+  cursor: pointer;
+}
+
+.select::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 18px;
+  width: 9px;
+  height: 9px;
+  border-right: 2.5px solid var(--text);
+  border-bottom: 2.5px solid var(--text);
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+}
+
+/* Range slider */
+
+input[type='range'] {
+  appearance: none;
+  width: 100%;
+  height: var(--thumb);
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+input[type='range']::-webkit-slider-runnable-track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--track);
+}
+
+input[type='range']::-webkit-slider-thumb {
+  appearance: none;
+  width: var(--thumb);
+  height: var(--thumb);
+  margin-top: calc((10px - var(--thumb)) / 2);
+  border: var(--border) solid var(--line);
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+input[type='range']:focus-visible {
+  outline: none;
+}
+
+input[type='range']:focus-visible::-webkit-slider-thumb {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.scale {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+/* Toggle switch */
+
+.field-switch {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.switch {
+  appearance: none;
+  position: relative;
+  width: 54px;
+  height: 32px;
+  margin: 0;
+  border: var(--border) solid var(--line);
+  border-radius: 999px;
+  background: var(--track);
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.switch::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--text);
+  transition: transform 120ms ease, background-color 120ms ease;
+}
+
+.switch:checked {
+  background: var(--accent);
+}
+
+.switch:checked::before {
+  background: var(--on-fill);
+  transform: translateX(22px);
+}
+
+/* Advanced */
+
+/* Padding gives the focus ring room. The negative margin keeps the text on the card's grid. */
+.advanced summary {
+  width: fit-content;
+  padding: var(--space-1) var(--space-2);
+  margin: calc(var(--space-1) * -1) calc(var(--space-2) * -1);
+  border-radius: var(--space-2);
+  cursor: pointer;
+}
+
+.advanced-body {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+/* Buttons */
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.button {
+  min-height: var(--control-height);
+  padding: var(--space-2) 20px;
+  border: var(--border) solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 80ms ease;
+}
+
+.button:hover {
+  background: var(--bg);
+}
+
+.button:active {
+  transform: translateY(2px);
+}
+
+.button-primary {
+  min-width: 120px;
+  background: var(--accent);
+  color: var(--on-fill);
+}
+
+.button-primary:hover {
+  background: color-mix(in srgb, var(--accent) 88%, var(--text));
+}
+
+.button-danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.button-danger:hover {
+  background: var(--danger);
+  color: var(--on-fill);
+}
+
+.button-danger:focus-visible {
+  outline-color: var(--danger);
+}
+
+.status {
+  flex: 1 1 240px;
+  font-weight: 500;
+  color: var(--accent);
+}
+
+.status[data-state='error'] {
+  color: var(--danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

@@ -9,11 +9,20 @@
     CONFIRM_CLEAR: 'Delete every saved label?',
   });
 
+  // Styled in options.css via [data-state].
+  const STATUS_STATE = Object.freeze({ OK: 'ok', ERROR: 'error' });
+
   const $ = (id) => document.getElementById(id);
   const status = (text, isError = false) => {
     $('status').textContent = text;
-    $('status').style.color = isError ? '#b00020' : '';
+    $('status').dataset.state = isError ? STATUS_STATE.ERROR : STATUS_STATE.OK;
   };
+
+  // The weights field sits in a collapsed <details>. Open it so the error has something to point at.
+  function revealWeights() {
+    $('advanced').open = true;
+    $('weights').focus();
+  }
 
   function parseWeights(raw) {
     if (!raw.trim()) return null;
@@ -45,6 +54,7 @@
       weights = parseWeights($('weights').value);
     } catch {
       status(TEXT.BAD_WEIGHTS, true);
+      revealWeights();
       return;
     }
     await chrome.storage.local.set({
