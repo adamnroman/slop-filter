@@ -6,6 +6,7 @@ Every release of Slop Filter. The format follows [Keep a Changelog](https://keep
 
 ### Changed
 
+- Posts of 5 or more words are scored. The cutoff was 8, which let one and two phrase slop through.
 - The options page saves each setting the moment it changes. The Save button is gone.
 
 ### Added

@@ -10,7 +10,7 @@ How the extension works inside, how to tune it, and what to know before changing
 4. `probability` combines the features with logistic weights. A tweet at or above the threshold is collapsed, animated then collapsed, dimmed, or badged.
 5. With labeling on, each scored tweet gets `AI` and `Human` buttons. A click saves the tweet, its features, and your label.
 
-Tweets under 8 words are never scored or hidden.
+Posts under 5 words are never scored or hidden. The cutoff is `MIN_WORDS` in `src/content.js`.
 
 ### Animated mode
 

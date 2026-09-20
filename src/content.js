@@ -42,7 +42,7 @@
   // Animated mode ends in the same collapsed state as collapse mode.
   const COLLAPSING_MODES = new Set([MODE.COLLAPSE, MODE.ANIMATED]);
   // Too little text to judge. These are never scored or hidden.
-  const MIN_WORDS = 8;
+  const MIN_WORDS = 5;
   // Outside animated mode, posts are scored well before they scroll into view,
   // so flagged ones are already hidden when they arrive.
   const PRELOAD_MARGIN = '1500px 0px';
