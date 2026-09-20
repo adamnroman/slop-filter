@@ -10,6 +10,7 @@ Every release of Slop Filter. The format follows [Keep a Changelog](https://keep
 
 ### Added
 
+- A tell for the insight reframe: "the hard part is...", "the real work is...", "what most people miss...". It runs on every post and carries a heavy starting weight.
 - Hover a post's percentage to see why it got that score: each check's pull, strongest first, and any reply-only questions that were not asked.
 - Live stats panel for demos: posts scanned, slop caught, last and average request time, questions answered, tokens, total cost, and cost per 1,000 posts. Off by default, on the options page.
 

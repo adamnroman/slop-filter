@@ -71,6 +71,15 @@ export const QUESTIONS = Object.freeze({
     instructions:
       "Does `post.text` announce news with stock emotional framing, such as 'I'm thrilled to announce', 'Excited to share', or 'Humbled and honored'?",
   },
+  insight_reframe: {
+    type: TYPE.NOUL,
+    instructions:
+      "Does `post.text` reframe its topic as a hidden insight, using a frame such as 'the hard part is...', 'the real work is...', 'what most people miss is...', 'the invisible half is still work', or 'X is actually Y'?",
+    criteria: {
+      true: 'It states, in general terms, what the hard part, the real work, the actual problem, or the overlooked piece of the topic is, and presents that as the deeper truth.',
+      false: "It reports what happened, asks something, jokes, or gives an opinion without presenting it as a deeper truth others overlook. A concrete account is false even with one of those phrases, such as 'the hard part was the visa, it took nine months'.",
+    },
+  },
   unearned_real: {
     type: TYPE.NOUL,
     instructions:
@@ -157,6 +166,7 @@ export const DEFAULT_WEIGHTS = Object.freeze({
     mini_essay_format: 0.6,
     balanced_stance: 0.5,
     announcement_hype: 0.8,
+    insight_reframe: 2.0,
     unearned_real: 0.8,
     generic_lesson: 1.2,
     restates_parent: 1.0,

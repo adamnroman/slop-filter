@@ -12,7 +12,7 @@ A Chrome extension that hides AI-generated posts. It works on X and LinkedIn tod
 ## How it does it
 
 1. It reads the text of each post as it nears your screen.
-2. It asks [TypeSafe Jev](https://docs.typesafe.ai) about 17 narrow yes/no and rating questions about the text. Examples: does it use the "it's not X, it's Y" frame, does it open with praise, how generic is it, how much personal voice does it have.
+2. It asks [TypeSafe Jev](https://docs.typesafe.ai) about 18 narrow yes/no and rating questions about the text. Examples: does it use the "it's not X, it's Y" frame, does it open with praise, how generic is it, how much personal voice does it have.
 3. Jev answers each question with a probability. It writes no text and gives no opinions.
 4. The extension combines the answers into one score with weights. A small script fits those weights from the posts you labeled.
 5. Posts under 8 words are left alone. There is too little to judge.
