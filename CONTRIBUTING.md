@@ -80,4 +80,4 @@ Never paste your API key into an issue.
 
 ## License
 
-Slop Filter is [MIT licensed](LICENSE). By contributing, you agree that your contributions are licensed under the same terms. The bundled Fredoka font is under the SIL Open Font License, in `assets/fonts/fredoka-OFL.txt`.
+Slop Filter is [MIT licensed](LICENSE). By contributing, you agree that your contributions are licensed under the same terms. The bundled Fredoka font is under the SIL Open Font License, in `assets/fonts/fredoka-OFL.txt`. The icon is under the Flaticon license, in `assets/icons/ATTRIBUTION.txt`.

@@ -199,6 +199,11 @@ a.hint {
   background: var(--surface);
 }
 
+.credits {
+  margin-top: 24px;
+  text-align: center;
+}
+
 .card-small {
   gap: var(--space-3);
 }

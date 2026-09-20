@@ -39,6 +39,10 @@ Or do it by hand: clone this repo, open `chrome://extensions`, turn on Developer
 
 See [CHANGELOG.md](CHANGELOG.md) and the [releases page](https://github.com/adamnroman/slop-filter/releases). Each release has the extension as a zip you can unpack and load.
 
+## Credits
+
+<a href="https://www.flaticon.com/free-icons/poop" title="poop icons">Poop icons created by HideMaru - Flaticon</a>
+
 ## License
 
-[MIT](LICENSE). The bundled Fredoka font is under the SIL Open Font License.
+[MIT](LICENSE) for the code. The bundled Fredoka font is under the SIL Open Font License. The icon is under the Flaticon license with the credit above, not MIT. See `assets/icons/ATTRIBUTION.txt`.

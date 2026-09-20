@@ -1,0 +1,6 @@
+The extension icon (icon-source.png and the sizes made from it) is not covered by
+this project's MIT license. It is used under the Flaticon license, which requires
+this credit:
+
+Poop icons created by HideMaru - Flaticon
+https://www.flaticon.com/free-icons/poop

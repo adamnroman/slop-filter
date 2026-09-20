@@ -8,7 +8,7 @@ Every release of Slop Filter. The format follows [Keep a Changelog](https://keep
 
 ### Changed
 
-- New extension icon.
+- New extension icon, by HideMaru from Flaticon, credited in the README, the options page, and `assets/icons/ATTRIBUTION.txt`.
 
 ## [0.6.3] - 2026-09-20
 
