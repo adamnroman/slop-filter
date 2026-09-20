@@ -4,7 +4,7 @@ How the extension works inside, how to tune it, and what to know before changing
 
 ## How it works
 
-1. `src/content.js` finds tweets near the viewport and reads their text. On a tweet page it also reads the post being replied to.
+1. `src/content.js` is the site-neutral core. It finds posts near the viewport through a site adapter in `src/sites/` and reads their text, plus the post being replied to when the adapter knows it.
 2. `src/background.js` sends one request per tweet to Jev with every question in `src/model.js`. It holds the API key. The page never sees it.
 3. Jev returns a probability (Noul) or a level (Score) per question. `featureVector` puts each on 0..1.
 4. `probability` combines the features with logistic weights. A tweet at or above the threshold is collapsed, animated then collapsed, dimmed, or badged.
@@ -28,6 +28,21 @@ It plays once per tweet. Reload x.com to replay. Tweets that come on screen toge
 - Retried: 429, 500, 502, 503, 504, network errors, and 10 s timeouts. Not retried: 400, 401, 403, 422.
 - After the last retry the tweet stays visible and its bar reads `Upstream API error · HTTP 429 Too Many Requests` (or the timeout, network, or missing key message). Hover the bar for the raw response body. The same text goes to the console as `[xaf]`.
 - Nothing is cached on failure and nothing pauses. The next tweets are scored as normal, and the failed tweet is scored again the next time X rebuilds it, usually when you scroll away and back.
+
+### Sites
+
+Each site is one small adapter in `src/sites/<site>.js` that sets `globalThis.XAF_SITE`:
+
+- `name`: short id, saved on every label.
+- `itemSelector`: matches every element that might be a scorable post.
+- `extract(element)`: returns `{ id, handle, text }`, or `null` to skip the element. It runs often, so keep it cheap.
+- `parentText(element, post)`: text of the post being replied to, or `null`. It runs once per post.
+
+To add a site: write the adapter, add a `src/sites/<site>.css` for layout fixes if needed, and add a `content_scripts` entry in `manifest.json` that loads `constants.js`, `dom-text.js`, the adapter, then `content.js`.
+
+- **X**: posts are `article[data-testid="tweet"]`, ids come from the permalink. Replies get their parent only on a tweet's own page.
+- **LinkedIn**: the React front end has no stable class names. Posts are `role="listitem"` elements whose `componentkey` starts with `update-card`. Comments carry their URN in `componentkey` on several nested wrappers, and only the outermost counts. Text is in `data-testid="expandable-text-box"`, complete even when clamped behind "... more". Posts expose no id, so the id is a hash of author plus text. A comment's parent is the post it sits under.
+- LinkedIn's terms restrict extensions that change its pages. Use it on your own account at your own risk.
 
 ## Install
 
@@ -66,7 +81,7 @@ One request per tweet, about 1k input tokens. Jev 1.13 is $0.042 per million inp
 ```bash
 node --test                          # unit tests
 node scripts/try.mjs "text" ["parent"]   # one tweet through every question
-node scripts/fit.mjs labels.json     # fit weights from labels
+node scripts/fit.mjs labels.json [site]  # fit weights from labels, all sites or one
 ```
 
 ## Notes

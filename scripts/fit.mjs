@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Fits weights from the labels exported on the options page.
-//   node scripts/fit.mjs labels.json
+//   node scripts/fit.mjs labels.json [site]
+// Pass a site (x, linkedin) to fit on that site's labels only. Tells differ per site.
 // Prints cross-validated precision/recall per threshold, then the weights JSON to
 // paste into the options page.
 import { readFileSync } from 'node:fs';
@@ -11,9 +12,12 @@ const MIN_PER_CLASS = 30;
 const TARGET_PRECISION = 0.95;
 const THRESHOLDS = [0.5, 0.6, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95];
 
-const path = process.argv[2];
+// Labels saved before sites existed carry no site. They all came from X.
+const DEFAULT_SITE = 'x';
+
+const [path, site] = process.argv.slice(2);
 if (!path) {
-  console.error('usage: node scripts/fit.mjs labels.json');
+  console.error('usage: node scripts/fit.mjs labels.json [site]');
   process.exit(1);
 }
 
@@ -29,7 +33,9 @@ function shuffled(rows, seed = 1) {
   return out;
 }
 
-const rows = shuffled(Object.values(JSON.parse(readFileSync(path, 'utf8'))));
+const allRows = Object.values(JSON.parse(readFileSync(path, 'utf8')));
+const rows = shuffled(allRows.filter((row) => !site || (row.site ?? DEFAULT_SITE) === site));
+if (site) console.error(`site: ${site}`);
 const names = [...new Set(rows.flatMap((row) => Object.keys(row.features)))].sort();
 const X = rows.map((row) => names.map((name) => row.features[name] ?? 0));
 const y = rows.map((row) => row.label);

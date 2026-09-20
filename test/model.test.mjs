@@ -28,7 +28,7 @@ test('parent questions are only asked when the parent is known', () => {
   const reply = buildQuestions({ text: 'hi', parentText: 'original post' });
   assert.ok(!('restates_parent' in alone));
   assert.ok('restates_parent' in reply);
-  assert.deepEqual(buildState({ text: 'hi' }), { tweet: { text: 'hi' } });
+  assert.deepEqual(buildState({ text: 'hi' }), { post: { text: 'hi' } });
   assert.deepEqual(buildState({ text: 'hi', parentText: 'p' }).parent, { text: 'p' });
 });
 
@@ -47,6 +47,15 @@ test('every feature has a default weight and lands on 0..1', () => {
   }
   assert.equal(features.em_dash, 1);
   assert.equal(featureVector({}, { text: 'all lower' }).all_lowercase, 1);
+});
+
+test('code features catch LinkedIn formatting tells', () => {
+  const bullets = '\u2705 Ship fast\n\u2705 Learn faster\n\u{1F680} Repeat\n\nAgree? #growth #mindset #leadership';
+  const plain = 'we shipped the thing on friday and it broke twice #oops';
+  assert.equal(featureVector({}, { text: bullets }).emoji_bullets, 1);
+  assert.equal(featureVector({}, { text: bullets }).hashtag_pile, 1);
+  assert.equal(featureVector({}, { text: plain }).emoji_bullets, 0);
+  assert.equal(featureVector({}, { text: plain }).hashtag_pile, 0);
 });
 
 test('default weights separate the extremes', () => {

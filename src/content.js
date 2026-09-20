@@ -1,14 +1,11 @@
-// Finds tweets on the page, asks the background worker to score them, and hides
-// the ones over the threshold. Also collects AI/human labels for fitting weights.
+// Site-neutral core. Finds posts on the page through the site adapter, asks the
+// background worker to score them, and hides the ones over the threshold. Also
+// collects AI/human labels for fitting weights.
 (() => {
   const { MSG, STORE, MODE, LABEL, DEFAULTS } = globalThis.XAF;
+  // Everything site-specific lives in the adapter loaded before this file (src/sites/).
+  const SITE = globalThis.XAF_SITE;
 
-  const SEL = Object.freeze({
-    TWEET: 'article[data-testid="tweet"]',
-    TEXT: '[data-testid="tweetText"]',
-    PERMALINK_TIME: 'a[href*="/status/"] time',
-    QUOTE_CONTAINER: 'div[role="link"]',
-  });
   const CLASS = Object.freeze({
     BAR: 'xaf-bar',
     FLAGGED: 'xaf-flagged',
@@ -21,7 +18,7 @@
     PASS: 'xaf-pass',
     FAIL: 'xaf-fail',
   });
-  // State on X's own tweet element lives in data attributes. X rewrites the element's
+  // State on the site's own post element lives in data attributes. X rewrites the element's
   // whole class list on every hover, which wipes any class added here.
   const DATA = Object.freeze({
     ID: 'xafId',
@@ -38,20 +35,19 @@
     LABEL_PROMPT: 'Label:',
     UPSTREAM_ERROR: 'Upstream API error',
   });
-  const STATUS_PATH = /^\/([^/]+)\/status\/(\d+)/;
   const SETTING_KEYS = [STORE.THRESHOLD, STORE.MODE, STORE.LABELING];
   // Animated mode ends in the same collapsed state as collapse mode.
   const COLLAPSING_MODES = new Set([MODE.COLLAPSE, MODE.ANIMATED]);
   // Too little text to judge. These are never scored or hidden.
   const MIN_WORDS = 8;
-  // Outside animated mode, tweets are scored well before they scroll into view,
+  // Outside animated mode, posts are scored well before they scroll into view,
   // so flagged ones are already hidden when they arrive.
   const PRELOAD_MARGIN = '1500px 0px';
-  // Animated mode scores a tweet when it is inside the top three quarters of the
+  // Animated mode scores a post when it is inside the top three quarters of the
   // viewport, so the scan on screen is the real wait for Jev.
   const STAGE_MARGIN = '0px 0px -25% 0px';
   const ANIMATION = Object.freeze({
-    // Tweets that come on screen together start one after another, top first.
+    // Posts that come on screen together start one after another, top first.
     STAGGER_MS: 150,
     // One trip of the scan line, top to bottom or back up. It bounces until Jev
     // answers, and always finishes the first trip down.
@@ -68,7 +64,7 @@
     COLLAPSE_EASING: 'ease-in-out',
     // The shrink is done at this point of the collapse. The rest fades the red strip out.
     SHRINK_END_OFFSET: 0.8,
-    // Height of the bar a collapsed tweet ends at, so the shrink lands on it.
+    // Height of the bar a collapsed post ends at, so the shrink lands on it.
     // Matches `min-height` of `.xaf-bar` in content.css.
     COLLAPSED_HEIGHT_PX: 28,
   });
@@ -79,56 +75,13 @@
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   const settings = { ...DEFAULTS };
-  const results = new Map(); // tweet id -> { p, features }
-  const revealed = new Set(); // tweet ids the user chose to show
-  const labeled = new Map(); // tweet id -> label given this session
-  const animated = new Set(); // tweet ids whose inspection already played
-  const awaitingStage = new WeakMap(); // article -> tweet
+  const results = new Map(); // post id -> { p, features }
+  const revealed = new Set(); // post ids the user chose to show
+  const labeled = new Map(); // post id -> label given this session
+  const animated = new Set(); // post ids whose inspection already played
+  const awaitingStage = new WeakMap(); // element -> post
   const animating = new WeakSet();
   const seen = new WeakSet();
-  let focal = { id: null, text: null, node: null };
-
-  function readText(node) {
-    let out = '';
-    for (const child of node.childNodes) {
-      if (child.nodeType === Node.TEXT_NODE) out += child.data;
-      else if (child.nodeName === 'IMG') out += child.alt;
-      else out += readText(child);
-    }
-    return out;
-  }
-
-  function extractTweet(article) {
-    const link = article.querySelector(SEL.PERMALINK_TIME)?.closest('a');
-    const match = link?.getAttribute('href')?.match(STATUS_PATH);
-    const textNode = article.querySelector(SEL.TEXT);
-    // A tweet with no text of its own would otherwise pick up the quoted tweet's text.
-    if (!match || !textNode || textNode.closest(SEL.QUOTE_CONTAINER)) return null;
-
-    const text = readText(textNode).trim();
-    return { id: match[2], handle: match[1], text };
-  }
-
-  function findFocal(statusId) {
-    for (const article of document.querySelectorAll(SEL.TWEET)) {
-      const tweet = extractTweet(article);
-      if (tweet?.id === statusId) return { id: statusId, text: tweet.text, node: article };
-    }
-    return null;
-  }
-
-  // On a status page, tweets below the opened tweet are replies to it.
-  function parentTextFor(article, tweet) {
-    const statusId = location.pathname.match(STATUS_PATH)?.[2];
-    if (!statusId || tweet.id === statusId) return null;
-    if (focal.id !== statusId) focal = findFocal(statusId) ?? focal;
-    if (focal.id !== statusId) return null;
-
-    const isAboveFocal =
-      focal.node.isConnected &&
-      article.compareDocumentPosition(focal.node) & Node.DOCUMENT_POSITION_FOLLOWING;
-    return isAboveFocal ? null : focal.text;
-  }
 
   function send(message) {
     return chrome.runtime.sendMessage(message).then((response) => {
@@ -149,11 +102,11 @@
     return el;
   }
 
-  function buildBar(article, tweet, result, isFlagged, isHidden) {
+  function buildBar(element, post, result, isFlagged, isHidden) {
     const bar = document.createElement('div');
     bar.className = CLASS.BAR;
     bar.classList.toggle(CLASS.FLAGGED, isFlagged);
-    // X navigates to the tweet on any click inside the article.
+    // Sites open the post on any click inside it.
     bar.addEventListener('click', (event) => event.stopPropagation());
 
     const percent = Math.round(result.p * 100);
@@ -164,19 +117,19 @@
     if (isFlagged && settings.mode !== MODE.BADGE) {
       bar.append(
         button(isHidden ? TEXT.SHOW : TEXT.HIDE, () => {
-          if (isHidden) revealed.add(tweet.id);
-          else revealed.delete(tweet.id);
-          render(article, tweet, result);
+          if (isHidden) revealed.add(post.id);
+          else revealed.delete(post.id);
+          render(element, post, result);
         }),
       );
     }
 
     if (settings.labeling) {
-      const current = labeled.get(tweet.id);
+      const current = labeled.get(post.id);
       const onLabel = (label) => () => {
-        labeled.set(tweet.id, label);
-        send({ type: MSG.LABEL, tweet, features: result.features, label }).catch(console.warn);
-        render(article, tweet, result);
+        labeled.set(post.id, label);
+        send({ type: MSG.LABEL, post, features: result.features, label }).catch(console.warn);
+        render(element, post, result);
       };
       const prompt = document.createElement('span');
       prompt.textContent = TEXT.LABEL_PROMPT;
@@ -189,81 +142,81 @@
     return bar;
   }
 
-  // Animated mode: hold the bar's space before the tweet is on screen, so the tweet
+  // Animated mode: hold the bar's space before the post is on screen, so the post
   // does not grow when the verdict bar arrives mid-animation.
-  function reserveBar(article) {
-    if (!settings.labeling || article.querySelector(`:scope > .${CLASS.BAR}`)) return;
+  function reserveBar(element) {
+    if (!settings.labeling || element.querySelector(`:scope > .${CLASS.BAR}`)) return;
     const placeholder = document.createElement('div');
     placeholder.className = CLASS.BAR;
-    article.append(placeholder);
-    article.dataset[DATA.BAR] = 'true';
+    element.append(placeholder);
+    element.dataset[DATA.BAR] = 'true';
   }
 
-  function clear(article) {
-    article.querySelector(`:scope > .${CLASS.BAR}`)?.remove();
-    delete article.dataset[DATA.HIDE];
-    article.dataset[DATA.BAR] = 'false';
+  function clear(element) {
+    element.querySelector(`:scope > .${CLASS.BAR}`)?.remove();
+    delete element.dataset[DATA.HIDE];
+    element.dataset[DATA.BAR] = 'false';
   }
 
   // Scoring failed after its retries. The bar says why instead of showing a score.
-  // Nothing is cached, so the tweet is scored again the next time X rebuilds it.
-  function renderError(article, error) {
+  // Nothing is cached, so the post is scored again the next time X rebuilds it.
+  function renderError(element, error) {
     console.warn('[xaf]', error.message, error.detail ?? '');
-    clear(article);
+    clear(element);
     const bar = document.createElement('div');
     bar.className = `${CLASS.BAR} ${CLASS.ERROR}`;
     bar.textContent = `${TEXT.UPSTREAM_ERROR} \u00b7 ${error.message}`;
     if (error.detail) bar.title = error.detail;
-    article.append(bar);
-    article.dataset[DATA.BAR] = 'true';
+    element.append(bar);
+    element.dataset[DATA.BAR] = 'true';
   }
 
-  function render(article, tweet, result) {
-    clear(article);
+  function render(element, post, result) {
+    clear(element);
     const isFlagged = result.p >= settings.threshold;
-    const isHidden = isFlagged && !revealed.has(tweet.id);
-    if (isHidden && COLLAPSING_MODES.has(settings.mode)) article.dataset[DATA.HIDE] = HIDE.COLLAPSE;
-    else if (isHidden && settings.mode === MODE.DIM) article.dataset[DATA.HIDE] = HIDE.DIM;
+    const isHidden = isFlagged && !revealed.has(post.id);
+    if (isHidden && COLLAPSING_MODES.has(settings.mode)) element.dataset[DATA.HIDE] = HIDE.COLLAPSE;
+    else if (isHidden && settings.mode === MODE.DIM) element.dataset[DATA.HIDE] = HIDE.DIM;
 
     const wantsBar = isFlagged || settings.labeling;
-    article.dataset[DATA.BAR] = String(wantsBar);
-    if (wantsBar) article.append(buildBar(article, tweet, result, isFlagged, isHidden));
+    element.dataset[DATA.BAR] = String(wantsBar);
+    if (wantsBar) element.append(buildBar(element, post, result, isFlagged, isHidden));
   }
 
-  async function resultFor(article, tweet) {
-    if (!results.has(tweet.id)) {
-      tweet.parentText = parentTextFor(article, tweet);
-      results.set(tweet.id, await send({ type: MSG.CLASSIFY, tweet }));
+  async function resultFor(element, post) {
+    if (!results.has(post.id)) {
+      post.parentText = SITE.parentText(element, post);
+      results.set(post.id, await send({ type: MSG.CLASSIFY, post }));
     }
-    return results.get(tweet.id);
+    return results.get(post.id);
   }
 
-  // Animated mode inspects a tweet once. A tweet already scored and shown under
+  // Animated mode inspects a post once. A post already scored and shown under
   // another mode is left as it is.
-  function wantsInspection(tweet) {
-    return settings.mode === MODE.ANIMATED && !animated.has(tweet.id) && !results.has(tweet.id);
+  function wantsInspection(post) {
+    return settings.mode === MODE.ANIMATED && !animated.has(post.id) && !results.has(post.id);
   }
 
-  function addOverlay(article, ...classNames) {
+  function addOverlay(element, ...classNames) {
     const overlay = document.createElement('div');
     overlay.className = classNames.join(' ');
-    article.append(overlay);
+    element.append(overlay);
     return overlay;
   }
 
-  // A scan line runs down the tweet, bounces off the bottom, runs back up, and keeps
+  // A scan line runs down the post, bounces off the bottom, runs back up, and keeps
   // going until Jev has answered. The first trip down always finishes. After that it
   // stops wherever it is the moment the answer lands. Returns the line, left in place.
-  async function playScan(article, pending) {
+  async function playScan(element, pending) {
     let hasAnswer = false;
     const answered = pending.then(
       () => (hasAnswer = true),
       () => (hasAnswer = true),
     );
 
-    const line = addOverlay(article, CLASS.SCANLINE);
+    const line = addOverlay(element, CLASS.SCANLINE);
     try {
-      for (let pass = 0; article.isConnected; pass++) {
+      for (let pass = 0; element.isConnected; pass++) {
         const isUp = pass % 2 === 1;
         // Going up, the bright edge leads from the top of the line and the glow trails below.
         line.classList.toggle(CLASS.SCAN_UP, isUp);
@@ -285,9 +238,9 @@
     return line;
   }
 
-  // The verdict color fades in over the whole tweet while the scan line fades out.
-  async function playVerdict(article, verdictClass, line) {
-    const fill = addOverlay(article, CLASS.FILL, verdictClass);
+  // The verdict color fades in over the whole post while the scan line fades out.
+  async function playVerdict(element, verdictClass, line) {
+    const fill = addOverlay(element, CLASS.FILL, verdictClass);
     line.animate([{ opacity: 1 }, { opacity: 0 }], {
       duration: ANIMATION.SCAN_FADE_MS,
       fill: 'forwards',
@@ -303,8 +256,8 @@
   // The container closes in on itself: it shrinks to bar height while its content
   // slides up at half that speed, so the top and bottom edges meet in the middle.
   // Returns the running animations, the shrink last. They hold their final frame.
-  function startCollapse(article, fill) {
-    const startHeight = article.getBoundingClientRect().height;
+  function startCollapse(element, fill) {
+    const startHeight = element.getBoundingClientRect().height;
     const endHeight = ANIMATION.COLLAPSED_HEIGHT_PX;
     const slideUp = `translateY(${-(startHeight - endHeight) / 2}px)`;
     const offset = ANIMATION.SHRINK_END_OFFSET;
@@ -314,7 +267,7 @@
       fill: 'forwards',
     };
 
-    const slides = [...article.children]
+    const slides = [...element.children]
       .filter((child) => child !== fill)
       .map((child) =>
         child.animate(
@@ -322,7 +275,7 @@
           timing,
         ),
       );
-    const shrink = article.animate(
+    const shrink = element.animate(
       [
         { height: `${startHeight}px`, opacity: 1 },
         { height: `${endHeight}px`, opacity: 1, offset },
@@ -333,50 +286,50 @@
     return [...slides, shrink];
   }
 
-  function fadeInBar(article) {
-    article
+  function fadeInBar(element) {
+    element
       .querySelector(`:scope > .${CLASS.BAR}`)
       ?.animate([{ opacity: 0 }, { opacity: 1 }], ANIMATION.BAR_FADE_MS);
   }
 
-  // Scan while Jev decides. Pass: green fades in, holds, fades out, and the tweet stays.
-  // Fail: red fades in, then the tweet collapses.
-  async function playInspection(article, tweet, delayMs) {
-    animating.add(article);
-    const isCurrent = () => article.isConnected && article.dataset[DATA.ID] === tweet.id;
+  // Scan while Jev decides. Pass: green fades in, holds, fades out, and the post stays.
+  // Fail: red fades in, then the post collapses.
+  async function playInspection(element, post, delayMs) {
+    animating.add(element);
+    const isCurrent = () => element.isConnected && element.dataset[DATA.ID] === post.id;
     const held = [];
     let line;
     let fill;
     try {
       await sleep(delayMs);
-      article.dataset[DATA.ANIMATING] = 'true';
-      const pending = resultFor(article, tweet);
-      line = await playScan(article, pending);
+      element.dataset[DATA.ANIMATING] = 'true';
+      const pending = resultFor(element, post);
+      line = await playScan(element, pending);
       let result;
       try {
         result = await pending;
       } catch (error) {
-        // Let the tweet be inspected again when it next comes on screen.
-        animated.delete(tweet.id);
-        if (isCurrent()) renderError(article, error);
+        // Let the post be inspected again when it next comes on screen.
+        animated.delete(post.id);
+        if (isCurrent()) renderError(element, error);
         return;
       }
       if (!isCurrent()) return;
 
       const isFlagged = result.p >= settings.threshold;
-      fill = await playVerdict(article, isFlagged ? CLASS.FAIL : CLASS.PASS, line);
+      fill = await playVerdict(element, isFlagged ? CLASS.FAIL : CLASS.PASS, line);
 
       if (isFlagged) {
         await sleep(ANIMATION.FAIL_HOLD_MS);
-        held.push(...startCollapse(article, fill));
+        held.push(...startCollapse(element, fill));
         await held.at(-1).finished;
         // Collapse for real before the held last frame is released, so nothing flickers.
         if (isCurrent()) {
-          render(article, tweet, result);
-          fadeInBar(article);
+          render(element, post, result);
+          fadeInBar(element);
         }
       } else {
-        if (isCurrent()) render(article, tweet, result);
+        if (isCurrent()) render(element, post, result);
         await sleep(ANIMATION.PASS_HOLD_MS);
         await fill.animate([{ opacity: 1 }, { opacity: 0 }], {
           duration: ANIMATION.PASS_FADE_MS,
@@ -384,26 +337,26 @@
         }).finished;
       }
     } catch (error) {
-      // AbortError: X dropped the node mid-animation.
+      // AbortError: the site dropped the node mid-animation.
       if (error.name !== ABORT_ERROR) console.warn('[xaf]', error.message);
     } finally {
       line?.remove();
       fill?.remove();
-      delete article.dataset[DATA.ANIMATING];
-      animating.delete(article);
+      delete element.dataset[DATA.ANIMATING];
+      animating.delete(element);
       for (const animation of held) animation.cancel();
     }
   }
 
-  function enterStage(article, delayMs) {
-    const tweet = awaitingStage.get(article);
-    awaitingStage.delete(article);
-    stage.unobserve(article);
-    if (!tweet || article.dataset[DATA.ID] !== tweet.id) return;
-    if (!wantsInspection(tweet)) return process(article);
+  function enterStage(element, delayMs) {
+    const post = awaitingStage.get(element);
+    awaitingStage.delete(element);
+    stage.unobserve(element);
+    if (!post || element.dataset[DATA.ID] !== post.id) return;
+    if (!wantsInspection(post)) return process(element);
 
-    animated.add(tweet.id);
-    playInspection(article, tweet, delayMs);
+    animated.add(post.id);
+    playInspection(element, post, delayMs);
   }
 
   const stage = new IntersectionObserver(
@@ -416,31 +369,33 @@
     { rootMargin: STAGE_MARGIN },
   );
 
-  async function process(article) {
-    if (animating.has(article)) return;
-    const tweet = extractTweet(article);
-    if (!tweet) return;
+  async function process(element) {
+    if (animating.has(element)) return;
+    const post = SITE.extract(element);
+    if (!post) return;
+    // Saved with every label, so weights can be fitted per site.
+    post.site = SITE.name;
 
-    // X reuses article nodes while scrolling, so a node can change tweets.
-    if (article.dataset[DATA.ID] !== tweet.id) {
-      clear(article);
-      article.dataset[DATA.ID] = tweet.id;
+    // Sites reuse nodes while scrolling, so a node can change posts.
+    if (element.dataset[DATA.ID] !== post.id) {
+      clear(element);
+      element.dataset[DATA.ID] = post.id;
     }
-    if (tweet.text.split(/\s+/).length < MIN_WORDS) return;
+    if (post.text.split(/\s+/).length < MIN_WORDS) return;
 
-    if (wantsInspection(tweet)) {
-      reserveBar(article);
-      awaitingStage.set(article, tweet);
-      stage.observe(article);
+    if (wantsInspection(post)) {
+      reserveBar(element);
+      awaitingStage.set(element, post);
+      stage.observe(element);
       return;
     }
 
     try {
-      const result = await resultFor(article, tweet);
-      // The node may have been reused for another tweet while waiting.
-      if (article.dataset[DATA.ID] === tweet.id) render(article, tweet, result);
+      const result = await resultFor(element, post);
+      // The node may have been reused for another post while waiting.
+      if (element.dataset[DATA.ID] === post.id) render(element, post, result);
     } catch (error) {
-      if (article.dataset[DATA.ID] === tweet.id) renderError(article, error);
+      if (element.dataset[DATA.ID] === post.id) renderError(element, error);
     }
   }
 
@@ -452,22 +407,22 @@
   );
 
   function scan() {
-    for (const article of document.querySelectorAll(SEL.TWEET)) {
-      if (!seen.has(article)) {
-        seen.add(article);
-        viewport.observe(article);
-      } else if (article.dataset[DATA.ID]) {
-        // Re-apply when X re-rendered the node (bar gone) or reused it for another tweet.
+    for (const element of document.querySelectorAll(SITE.itemSelector)) {
+      if (!seen.has(element)) {
+        seen.add(element);
+        viewport.observe(element);
+      } else if (element.dataset[DATA.ID]) {
+        // Re-apply when the site re-rendered the node (bar gone) or reused it for another post.
         const lostBar =
-          article.dataset[DATA.BAR] === 'true' && !article.querySelector(`:scope > .${CLASS.BAR}`);
-        const isStale = extractTweet(article)?.id !== article.dataset[DATA.ID];
-        if (lostBar || isStale) process(article);
+          element.dataset[DATA.BAR] === 'true' && !element.querySelector(`:scope > .${CLASS.BAR}`);
+        const isStale = SITE.extract(element)?.id !== element.dataset[DATA.ID];
+        if (lostBar || isStale) process(element);
       }
     }
   }
 
   function rerenderAll() {
-    for (const article of document.querySelectorAll(SEL.TWEET)) process(article);
+    for (const element of document.querySelectorAll(SITE.itemSelector)) process(element);
   }
 
   let scanQueued = false;

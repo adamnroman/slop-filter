@@ -1,19 +1,50 @@
 {
   "manifest_version": 3,
   "name": "Slop Filter",
-  "version": "0.5.2",
-  "description": "Hides tweets on x.com that are likely AI-generated, scored by TypeSafe Jev.",
-  "permissions": ["storage"],
-  "host_permissions": ["https://api.typesafe.ai/*"],
+  "version": "0.6.0",
+  "description": "Hides AI-generated posts on X and LinkedIn, scored by TypeSafe Jev.",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://api.typesafe.ai/*"
+  ],
   "background": {
     "service_worker": "src/background.js",
     "type": "module"
   },
   "content_scripts": [
     {
-      "matches": ["https://x.com/*", "https://twitter.com/*"],
-      "js": ["src/constants.js", "src/content.js"],
-      "css": ["src/content.css"],
+      "matches": [
+        "https://x.com/*",
+        "https://twitter.com/*"
+      ],
+      "js": [
+        "src/constants.js",
+        "src/dom-text.js",
+        "src/sites/x.js",
+        "src/content.js"
+      ],
+      "css": [
+        "src/content.css",
+        "src/sites/x.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.linkedin.com/*"
+      ],
+      "js": [
+        "src/constants.js",
+        "src/dom-text.js",
+        "src/sites/linkedin.js",
+        "src/content.js"
+      ],
+      "css": [
+        "src/content.css",
+        "src/sites/linkedin.css"
+      ],
       "run_at": "document_idle"
     }
   ],

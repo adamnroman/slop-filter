@@ -1,6 +1,6 @@
 # Slop Filter
 
-A Chrome extension that hides AI-generated posts. It works on X today. LinkedIn, Reddit, and YouTube are next.
+A Chrome extension that hides AI-generated posts. It works on X and LinkedIn today. Reddit and YouTube are next.
 
 ## What it does
 
@@ -12,7 +12,7 @@ A Chrome extension that hides AI-generated posts. It works on X today. LinkedIn,
 ## How it does it
 
 1. It reads the text of each post as it nears your screen.
-2. It asks [TypeSafe Jev](https://docs.typesafe.ai) about 14 narrow yes/no and rating questions about the text. Examples: does it use the "it's not X, it's Y" frame, does it open with praise, how generic is it, how much personal voice does it have.
+2. It asks [TypeSafe Jev](https://docs.typesafe.ai) about 15 narrow yes/no and rating questions about the text. Examples: does it use the "it's not X, it's Y" frame, does it open with praise, how generic is it, how much personal voice does it have.
 3. Jev answers each question with a probability. It writes no text and gives no opinions.
 4. The extension combines the answers into one score with weights. A small script fits those weights from the posts you labeled.
 5. Posts under 8 words are left alone. There is too little to judge.
@@ -39,7 +39,7 @@ Install the Slop Filter Chrome extension for me.
    d. On the Slop Filter card, click Details, then "Extension options".
    e. Paste my TypeSafe API key and click Save. If I do not have a key,
       send me to https://console.typesafe.ai/keys to create one.
-   f. Open x.com and scroll. Every post of 8 or more words should get
+   f. Open x.com or linkedin.com and scroll. Every post of 8 or more words should get
       a small "AI 12%" line under it.
 4. Never ask me to paste my API key into this chat. It goes only into
    the extension's options page.

@@ -1,0 +1,5 @@
+/* A LinkedIn post card is a flex column, so the bar already lands on its own line.
+   Comments are plain blocks. The bar just needs to line up with the comment text. */
+[componentkey*="urn:li:comment:"] > .xaf-bar {
+  padding-left: 52px;
+}

@@ -1,21 +1,17 @@
-/* State is in data attributes, not classes: X rewrites the tweet's class list on hover. */
-article[data-xaf-hide="collapse"] > :not(.xaf-bar) {
+/* Shared by every site. Site-specific layout fixes live in src/sites/<site>.css.
+   State is in data attributes, not classes: X rewrites a post's class list on hover. */
+[data-xaf-hide="collapse"] > :not(.xaf-bar) {
   display: none !important;
 }
 
-article[data-xaf-hide="dim"] > :not(.xaf-bar) {
+[data-xaf-hide="dim"] > :not(.xaf-bar) {
   opacity: 0.25;
-}
-
-/* X lays the article out as a flex row. Wrapping puts the bar on its own line. */
-article:has(> .xaf-bar) {
-  flex-wrap: wrap;
 }
 
 .xaf-bar {
   flex: 0 0 100%;
   box-sizing: border-box;
-  /* Same height empty or full, so a reserved bar never resizes the tweet. */
+  /* Same height empty or full, so a reserved bar never resizes the post. */
   min-height: 28px;
   display: flex;
   align-items: center;
@@ -52,8 +48,8 @@ article:has(> .xaf-bar) {
 }
 
 /* Animated mode: a scan line bounces while Jev decides, then green (pass) or
-   red (fail) fades in. Failed tweets then close in on themselves. */
-article[data-xaf-animating] {
+   red (fail) fades in. Failed posts then close in on themselves. */
+[data-xaf-animating] {
   --xaf-scan: rgb(120, 200, 255);
   --xaf-pass: rgba(0, 186, 124, 0.42);
   --xaf-pass-edge: rgb(0, 230, 150);
@@ -104,7 +100,7 @@ article[data-xaf-animating] {
   bottom: auto;
 }
 
-/* The verdict covers the whole tweet and fades in. */
+/* The verdict covers the whole post and fades in. */
 .xaf-fill {
   position: absolute;
   inset: 0;

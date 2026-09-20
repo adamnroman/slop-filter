@@ -1,0 +1,4 @@
+/* X lays a tweet out as a flex row. Wrapping puts the bar on its own line. */
+article[data-testid="tweet"]:has(> .xaf-bar) {
+  flex-wrap: wrap;
+}
