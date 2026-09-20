@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Slop Filter",
-  "version": "0.6.4",
+  "version": "0.6.4.1",
   "description": "Hides AI-generated posts on X and LinkedIn, scored by TypeSafe Jev.",
   "icons": {
     "16": "assets/icons/icon-16.png",
@@ -29,11 +29,13 @@
         "src/constants.js",
         "src/dom-text.js",
         "src/sites/x.js",
+        "src/stats-panel.js",
         "src/content.js"
       ],
       "css": [
         "src/content.css",
-        "src/sites/x.css"
+        "src/sites/x.css",
+        "src/stats-panel.css"
       ],
       "run_at": "document_idle"
     },
@@ -45,11 +47,13 @@
         "src/constants.js",
         "src/dom-text.js",
         "src/sites/linkedin.js",
+        "src/stats-panel.js",
         "src/content.js"
       ],
       "css": [
         "src/content.css",
-        "src/sites/linkedin.css"
+        "src/sites/linkedin.css",
+        "src/stats-panel.css"
       ],
       "run_at": "document_idle"
     }

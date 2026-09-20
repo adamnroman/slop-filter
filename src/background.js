@@ -8,6 +8,7 @@ import {
   buildState,
   featureVector,
   probability,
+  requestCostUsd,
 } from './model.js';
 
 const { MSG, STORE } = globalThis.XAF;
@@ -15,7 +16,7 @@ const { MSG, STORE } = globalThis.XAF;
 const MAX_IN_FLIGHT = 6;
 const ERROR_NO_KEY = 'No API key set. Open the extension options.';
 
-// Post id -> promise of features. Holding the promise dedupes concurrent asks.
+// Post id -> promise of { features, usage }. Holding the promise dedupes concurrent asks.
 const featureCache = new Map();
 
 let inFlight = 0;
@@ -36,15 +37,24 @@ async function fetchFeatures(post) {
   const { [STORE.API_KEY]: apiKey } = await chrome.storage.local.get(STORE.API_KEY);
   if (!apiKey) throw new Error(ERROR_NO_KEY);
 
-  const response = await withSlot(() =>
-    askJev({
-      apiKey,
-      model: JEV_MODEL,
-      state: buildState(post),
-      questions: buildQuestions(post),
-    }),
-  );
-  return featureVector(response.answers, post);
+  const questions = buildQuestions(post);
+  // Timed inside the slot, so waiting in the queue does not count. Retries do.
+  const { response, latencyMs } = await withSlot(async () => {
+    const startedAt = performance.now();
+    const answered = await askJev({ apiKey, model: JEV_MODEL, state: buildState(post), questions });
+    return { response: answered, latencyMs: performance.now() - startedAt };
+  });
+
+  const inputTokens = response.usage?.input_tokens ?? 0;
+  return {
+    features: featureVector(response.answers, post),
+    usage: {
+      inputTokens,
+      costUsd: requestCostUsd(inputTokens),
+      latencyMs,
+      questions: Object.keys(questions).length,
+    },
+  };
 }
 
 function cachedFeatures(post) {
@@ -57,10 +67,16 @@ function cachedFeatures(post) {
 }
 
 // Weights are read per request, so new fitted weights apply without re-asking Jev.
+// `usage` is null when the answer came from the cache, so nothing is counted twice.
 async function classify(post) {
-  const features = await cachedFeatures(post);
+  const isFresh = !featureCache.has(post.id);
+  const { features, usage } = await cachedFeatures(post);
   const { [STORE.WEIGHTS]: weights } = await chrome.storage.local.get(STORE.WEIGHTS);
-  return { features, p: probability(features, weights ?? DEFAULT_WEIGHTS) };
+  return {
+    features,
+    p: probability(features, weights ?? DEFAULT_WEIGHTS),
+    usage: isFresh ? usage : null,
+  };
 }
 
 // Label writes are read-modify-write on one key, so they run one at a time.

@@ -38,6 +38,7 @@
     $('thresholdValue').textContent = $('threshold').value;
     $('mode').value = stored[STORE.MODE] ?? DEFAULTS.mode;
     $('labeling').checked = stored[STORE.LABELING] ?? DEFAULTS.labeling;
+    $('stats').checked = stored[STORE.STATS] ?? DEFAULTS.stats;
     $('weights').value = stored[STORE.WEIGHTS] ? JSON.stringify(stored[STORE.WEIGHTS], null, 2) : '';
     showLabelCounts(stored[STORE.LABELS] ?? {});
   }
@@ -62,6 +63,7 @@
       [STORE.THRESHOLD]: Number($('threshold').value) / 100,
       [STORE.MODE]: $('mode').value,
       [STORE.LABELING]: $('labeling').checked,
+      [STORE.STATS]: $('stats').checked,
     });
     if (weights) await chrome.storage.local.set({ [STORE.WEIGHTS]: weights });
     else await chrome.storage.local.remove(STORE.WEIGHTS);

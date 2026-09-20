@@ -10,6 +10,7 @@ globalThis.XAF = Object.freeze({
     THRESHOLD: 'threshold',
     MODE: 'mode',
     LABELING: 'labeling',
+    STATS: 'stats',
     WEIGHTS: 'weights',
     LABELS: 'labels',
   }),
@@ -24,5 +25,6 @@ globalThis.XAF = Object.freeze({
     threshold: 0.75,
     mode: 'collapse',
     labeling: true,
+    stats: false,
   }),
 });

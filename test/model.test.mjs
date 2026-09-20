@@ -8,6 +8,7 @@ import {
   buildState,
   featureVector,
   probability,
+  requestCostUsd,
 } from '../src/model.js';
 
 const MAX_SCORE_LEVELS = 10; // API limit
@@ -62,6 +63,12 @@ test('reply-only questions include the generic lesson check', () => {
   assert.ok(!('generic_lesson' in buildQuestions({ text: 'hi' })));
   assert.ok('generic_lesson' in buildQuestions({ text: 'hi', parentText: 'original post' }));
   assert.ok('unearned_real' in buildQuestions({ text: 'hi' }));
+});
+
+test('cost is input tokens at the per-million price', () => {
+  assert.equal(requestCostUsd(0), 0);
+  assert.ok(Math.abs(requestCostUsd(1_000_000) - 0.042) < 1e-12);
+  assert.ok(Math.abs(requestCostUsd(1000) * 1000 - 0.042) < 1e-9, 'about 4 cents per 1,000 posts of 1k tokens');
 });
 
 test('default weights separate the extremes', () => {

@@ -3,6 +3,12 @@
 
 // Pinned, not an alias: fitted weights and the threshold are tied to one model version.
 export const JEV_MODEL = 'jev-1.13.0';
+// Jev bills input tokens only. Output tokens are free. Price for the pinned model.
+export const JEV_USD_PER_MILLION_INPUT_TOKENS = 0.042;
+
+export function requestCostUsd(inputTokens) {
+  return (inputTokens / 1_000_000) * JEV_USD_PER_MILLION_INPUT_TOKENS;
+}
 
 const TYPE = Object.freeze({ NOUL: 'noul', SCORE: 'score' });
 

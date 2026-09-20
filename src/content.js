@@ -5,6 +5,8 @@
   const { MSG, STORE, MODE, LABEL, DEFAULTS } = globalThis.XAF;
   // Everything site-specific lives in the adapter loaded before this file (src/sites/).
   const SITE = globalThis.XAF_SITE;
+  // The optional live stats panel (src/stats-panel.js).
+  const STATS = globalThis.XAF_STATS;
 
   const CLASS = Object.freeze({
     BAR: 'xaf-bar',
@@ -35,7 +37,7 @@
     LABEL_PROMPT: 'Label:',
     UPSTREAM_ERROR: 'Upstream API error',
   });
-  const SETTING_KEYS = [STORE.THRESHOLD, STORE.MODE, STORE.LABELING];
+  const SETTING_KEYS = [STORE.THRESHOLD, STORE.MODE, STORE.LABELING, STORE.STATS];
   // Animated mode ends in the same collapsed state as collapse mode.
   const COLLAPSING_MODES = new Set([MODE.COLLAPSE, MODE.ANIMATED]);
   // Too little text to judge. These are never scored or hidden.
@@ -186,7 +188,10 @@
   async function resultFor(element, post) {
     if (!results.has(post.id)) {
       post.parentText = SITE.parentText(element, post);
-      results.set(post.id, await send({ type: MSG.CLASSIFY, post }));
+      const result = await send({ type: MSG.CLASSIFY, post });
+      results.set(post.id, result);
+      // Once per post per page, the moment the answer lands.
+      STATS.record({ usage: result.usage, isFlagged: result.p >= settings.threshold });
     }
     return results.get(post.id);
   }
@@ -441,11 +446,13 @@
     }
     // New weights change every probability. Features are cached in the worker.
     if (changes[STORE.WEIGHTS]) results.clear();
+    STATS.setEnabled(settings.stats);
     rerenderAll();
   });
 
   chrome.storage.local.get(SETTING_KEYS).then((stored) => {
     for (const key of SETTING_KEYS) if (stored[key] !== undefined) settings[key] = stored[key];
+    STATS.setEnabled(settings.stats);
     scan();
   });
 })();
