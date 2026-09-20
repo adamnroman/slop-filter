@@ -1,10 +1,12 @@
 # Contributing to Slop Filter
 
-Thanks for helping. The most useful contributions, in order:
+Thanks for helping. Right now we are looking for three kinds of contribution:
 
-1. **A tell you noticed.** A pattern that gives away AI-written posts, turned into one question.
-2. **A new site.** Reddit and YouTube are next. Anything with a feed works.
-3. **Fixes.** Sites change their pages often, so selectors break.
+1. **New social media sites.** Reddit and YouTube are next. Anything with a feed works.
+2. **Better recognition of AI-written posts.** A tell you noticed, turned into one question, or a sharper version of a question we already ask.
+3. **Making it more efficient.** Fewer tokens, fewer requests, faster results, same accuracy.
+
+For anything else, open an issue first so we can talk about it before you build it.
 
 ## Set up
 
@@ -28,7 +30,16 @@ Using a coding agent? Point it at [SKILL.md](SKILL.md). It covers setup and ever
 
 Commit titles follow `feat:`, `fix:`, `docs:`, `chore:`.
 
-## Add a tell
+## New sites: add an adapter
+
+A site is one adapter in `src/sites/<site>.js`. Copy `src/sites/linkedin.js`. The contract is in [docs/development.md](docs/development.md).
+
+- Inspect the live site first. Prefer stable hooks (`data-testid`, `role`, id-like attributes) over class names.
+- `extract` runs often. Keep it cheap, and return `null` for anything that is not a scorable post.
+- Add a `content_scripts` entry in `manifest.json`, and a `src/sites/<site>.css` only if the bar or the collapse needs a layout fix.
+- Some sites restrict extensions that change their pages. Say so in the adapter's notes in `docs/development.md`.
+
+## Better recognition: add or sharpen a tell
 
 A tell is one entry in `QUESTIONS` in `src/model.js`.
 
@@ -39,14 +50,14 @@ A tell is one entry in `QUESTIONS` in `src/model.js`.
 - Give it a modest starting weight in `DEFAULT_WEIGHTS`. The tests fail if a feature has no weight.
 - In the pull request, show it working: the output of `node scripts/try.mjs "post text" "text it replied to"` on a few posts it should catch and a few it should leave alone. Paraphrase the posts or use your own. Do not paste other people's posts with their names.
 
-## Add a site
+## Make it more efficient
 
-A site is one adapter in `src/sites/<site>.js`. Copy `src/sites/linkedin.js`. The contract is in [docs/development.md](docs/development.md).
+Every post costs one request to Jev. The cost is input tokens: the post text plus every question. Output tokens are free.
 
-- Inspect the live site first. Prefer stable hooks (`data-testid`, `role`, id-like attributes) over class names.
-- `extract` runs often. Keep it cheap, and return `null` for anything that is not a scorable post.
-- Add a `content_scripts` entry in `manifest.json`, and a `src/sites/<site>.css` only if the bar or the collapse needs a layout fix.
-- Some sites restrict extensions that change their pages. Say so in the adapter's notes in `docs/development.md`.
+- Good targets: shorter question wording that scores the same, skipping questions that cannot apply, not scoring the same text twice, fewer wasted requests on posts the user never sees, faster first result on page load.
+- Show the numbers. `node scripts/try.mjs` prints the input tokens for one post. Give before and after, on the same posts.
+- Accuracy comes first. If a change touches a question's wording, show that its answers did not move on a few posts it should catch and a few it should leave alone.
+- One request per post, with every question in it, is on purpose. Jev answers all the questions in a request in parallel, so splitting them up costs more and is slower.
 
 ## House rules
 
