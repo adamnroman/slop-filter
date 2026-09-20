@@ -1,0 +1,39 @@
+name: Release
+
+# Pushing a version tag publishes a GitHub Release: tests, a clean extension zip,
+# and that version's notes from CHANGELOG.md. Cut the tag with scripts/release.mjs.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check the tag against manifest.json and read the release notes
+        run: node scripts/changelog.mjs "$GITHUB_REF_NAME" > release-notes.md
+
+      - name: Run the tests
+        run: node --test
+
+      - name: Build the extension zip
+        run: zip -r "slop-filter-$GITHUB_REF_NAME.zip" manifest.json options.html src assets LICENSE
+
+      - name: Publish the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create "$GITHUB_REF_NAME" "slop-filter-$GITHUB_REF_NAME.zip"
+          --title "Slop Filter $GITHUB_REF_NAME"
+          --notes-file release-notes.md
+          --verify-tag

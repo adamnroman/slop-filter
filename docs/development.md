@@ -76,19 +76,34 @@ Labels saved before a question existed do not have that feature. Relabel or coll
 
 One request per tweet, about 1k input tokens. Jev 1.13 is $0.042 per million input tokens, so 1,000 tweets costs about 4 cents.
 
+## Versions and releases
+
+- A release is three numbers (`0.7.0`), follows [Semantic Versioning](https://semver.org/), and has a git tag `v0.7.0`, a section in `CHANGELOG.md`, and a GitHub Release with the extension as a zip.
+- Between releases, bump a fourth number in `manifest.json` (`0.6.2.1`, `0.6.2.2`) when you change code. That is what lets the options page warn that Chrome is running older code. Leave `package.json` alone. Chrome allows four numbers, and the release script refuses them, so a development build can never be tagged by mistake.
+- Every change adds a line under `## [Unreleased]` in `CHANGELOG.md`.
+
+To cut a release:
+
+1. Set the new three-number version in `manifest.json` and `package.json`.
+2. In `CHANGELOG.md`, move the Unreleased notes under `## [x.y.z] - yyyy-mm-dd`, and add the compare link at the bottom.
+3. Commit.
+4. `node scripts/release.mjs`. It checks the branch, a clean tree, matching versions, the changelog section, and the tests, then creates the annotated tag. It never pushes.
+5. `git push origin main vX.Y.Z`. The Release workflow (`.github/workflows/release.yml`) checks the tag against the manifest, runs the tests, builds the zip, and publishes the GitHub Release with that version's notes.
+
 ## Commands
 
 ```bash
 node --test                          # unit tests
 node scripts/try.mjs "text" ["parent"]   # one tweet through every question
 node scripts/fit.mjs labels.json [site]  # fit weights from labels, all sites or one
+node scripts/release.mjs                 # check everything and tag a release (never pushes)
 ```
 
 ## Notes
 
 - The model is pinned to `jev-1.13.0` in `src/model.js`. Refit after changing it.
 - The API key lives in `chrome.storage.local`. Fine for a personal extension. Do not publish it to the store like this.
-- After any code change, reload the extension (options page: Reload extension, or the reload icon on `chrome://extensions`), then reload x.com. Reloading x.com alone keeps the old code. Bump `version` in `manifest.json` with each change so the options page can warn when Chrome is behind.
+- After any code change, reload the extension (options page: Reload extension, or the reload icon on `chrome://extensions`), then reload x.com. Reloading x.com alone keeps the old code. Bump the fourth number of `version` in `manifest.json` with each change (see Versions and releases) so the options page can warn when Chrome is behind.
 - X rewrites a tweet element's whole class list on every hover, which wipes any class an extension adds. State on the tweet element goes in data attributes (`DATA` in `src/content.js`). Classes are only for elements the extension creates.
 - Outside Animated mode, tweets are scored 1500px before they scroll into view, so flagged ones are already hidden when they arrive. Animated mode scores a tweet only when it enters the top three quarters of the viewport.
 - X changes its DOM. Selectors are in `SEL` at the top of `src/content.js`.

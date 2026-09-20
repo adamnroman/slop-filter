@@ -23,7 +23,7 @@ Using a coding agent? Point it at [SKILL.md](SKILL.md). It covers setup and ever
 
 1. Branch from `main`.
 2. Make one focused change.
-3. Bump `version` in `manifest.json`.
+3. Add a line under `## [Unreleased]` in `CHANGELOG.md`. Leave the version numbers alone. The maintainer sets them at release.
 4. Run `node --test`.
 5. Click "Reload extension" on the options page, then reload your open tabs. Reloading the tab alone keeps the old code running.
 6. Open a pull request. Say what you changed, which sites and flag modes you tried it on, and what you could not check. Add a screenshot or a short clip for anything visual.

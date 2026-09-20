@@ -35,6 +35,10 @@ Or do it by hand: clone this repo, open `chrome://extensions`, turn on Developer
 
 [SKILL.md](SKILL.md) teaches your coding agent how to update it, add a tell you noticed, fit the weights from your labels, and add a site. [docs/development.md](docs/development.md) has the full detail. To send a change back, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Releases
+
+See [CHANGELOG.md](CHANGELOG.md) and the [releases page](https://github.com/adamnroman/slop-filter/releases). Each release has the extension as a zip you can unpack and load.
+
 ## License
 
 [MIT](LICENSE). The bundled Fredoka font is under the SIL Open Font License.
