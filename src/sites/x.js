@@ -4,6 +4,12 @@
 //   itemSelector  matches every element that might be a scorable post
 //   extract(el)   -> { id, handle, text } or null. Called often, so keep it cheap.
 //   parentText(el, post) -> text of the post being replied to, or null. Called once.
+//   chipHosts(el) -> optional. Elements in the site's own header line that the score chip
+//                 may be mounted in, best spot first. The chip goes at the end of the first
+//                 one where it shows up and the host stays the same height, as an inline
+//                 pill. A host belongs to one item only. Without the hook, with an empty
+//                 list, or when no host fits, the chip floats over a corner of the item.
+//                 A collapsed item's row and an error always go in the item.
 (() => {
   const { readText } = globalThis.XAF_DOM;
 

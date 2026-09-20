@@ -37,13 +37,27 @@ Each site is one small adapter in `src/sites/<site>.js` that sets `globalThis.XA
 - `itemSelector`: matches every element that might be a scorable post.
 - `extract(element)`: returns `{ id, handle, text }`, or `null` to skip the element. It runs often, so keep it cheap.
 - `parentText(element, post)`: text of the post being replied to, or `null`. It runs once per post.
+- `chipHosts(element)`: optional. Elements in the site's own header line that the score chip may be mounted in, best spot first. Return an empty list for items that have none. See "Where the score goes" below.
 
 To add a site: write the adapter, add a `src/sites/<site>.css` for layout fixes if needed, and add a `content_scripts` entry in `manifest.json` that loads `constants.js`, `dom-text.js`, the adapter, then `content.js`.
 
 - **X**: posts are `article[data-testid="tweet"]`, ids come from the permalink. Replies get their parent only on a tweet's own page.
 - **LinkedIn**: the React front end has no stable class names. Posts are `role="listitem"` elements whose `componentkey` starts with `update-card`. Comments carry their URN in `componentkey` on several nested wrappers, and only the outermost counts. Text is in `data-testid="expandable-text-box"`, complete even when clamped behind "... more". Posts expose no id, so the id is a hash of author plus text. A comment's parent is the post it sits under.
 - **Reddit** (www.reddit.com, not old.reddit.com): posts and comments are sealed web components, `shreddit-post` and `shreddit-comment`. A bar placed directly inside one may not render, and hiding its children leaves its vote and header chrome behind. So the items are the plain containers: the `article` that directly wraps a feed post (the whole card collapses), an opened post's `[slot="text-body"]`, and each comment's `[slot="comment"]` (only the text folds, replies stay). A post's text is its title plus the body on the page. A comment's parent is the comment it is nested under, or the post. These selectors came from other open source Reddit extensions and were tested against fake pages, not inspected on the live site. If scores do not show up, check `SEL` in `src/sites/reddit.js` first.
+  - A visible comment's chip is inline in the comment's meta area, `[slot="commentMeta"]`, which holds the username, the time, and Reddit's own badges. `chipHosts` offers three spots, best first: the end of the line that holds Reddit's badges (`shreddit-comment-badges`, `author-flair-event-handler`, `community-achievements-flair`), so the chip sits to their right, then the end of the line with the time (`[noun="comment_time"]`), then the meta area itself. Only the comment's own meta area counts, never a nested reply's.
+  - This spot was not inspected live either. It comes from other extensions on GitHub: Pangram's AI detector appends its badge to `[slot="commentMeta"]` (`spotdemo4/pangram-chrome`, `content/index.iife.js`), Reddit++ reads the author, time, and flair elements inside it (`lnm95/redditPlusPlus`, `src/modules/comments/comments.ts` and `src/modules/users/userInfo.ts`), and RedditEnhancer puts its user tag next to the author in it (`joelacus/RedditEnhancer`, `user_tagging.js`). Which line Reddit puts its badges on is a guess, which is why the core checks the host's height.
+  - A comment with no meta area of its own, feed posts, and opened posts keep the floating chip.
 - LinkedIn's terms restrict extensions that change its pages. Use it on your own account at your own risk.
+
+#### Where the score goes
+
+- By default the chip floats over a corner of the item, so it adds no height. A site moves it with `--xaf-chip-top`, `--xaf-chip-right`, and `--xaf-chip-bottom` in its CSS.
+- With `chipHosts`, a visible item's chip is mounted at the end of a host instead, as an inline pill (`.xaf-bar.xaf-inline` in `src/content.css`). It is 14px tall, buttons included, so it fits the 16px line of 12px meta text.
+- The core tries the hosts in order. It keeps the first one where the chip shows up and the host stays the same height. A host that grows means the chip wrapped or took a row of its own, so the next one is tried. When none fits, the chip floats over the item as before.
+- A host belongs to one item. Before mounting, the core removes any chip already in the hosts, which covers a site that rebuilt the item but kept its header.
+- A collapsed item's full row and the error row always go in the item. The row stands in for the hidden text.
+- The core tracks each item's bar in a `WeakMap`, because the bar may be outside the item. When the site wipes the chip, the next scan puts it back. A site that wipes it 3 times in a row, each within 2 seconds of the last, gets the floating chip for that item from then on (`HOST_LOSS` in `src/content.js`).
+- A click on the chip calls `preventDefault` and `stopPropagation`, so a chip inside a `summary` or a link does not fold the comment or navigate.
 
 ## Install
 
@@ -108,5 +122,5 @@ node scripts/release.mjs                 # check everything and tag a release (n
 - After any code change, reload the extension (options page: Reload extension, or the reload icon on `chrome://extensions`), then reload x.com. Reloading x.com alone keeps the old code. Bump the fourth number of `version` in `manifest.json` with each change (see Versions and releases) so the options page can warn when Chrome is behind.
 - X rewrites a tweet element's whole class list on every hover, which wipes any class an extension adds. State on the tweet element goes in data attributes (`DATA` in `src/content.js`). Classes are only for elements the extension creates.
 - Outside Animated mode, tweets are scored 1500px before they scroll into view, so flagged ones are already hidden when they arrive. Animated mode scores a tweet only when it enters the top three quarters of the viewport.
-- The score is a chip that floats over a corner of the post (`.xaf-bar` in `src/content.css`), so scoring never changes a post's height. A site moves it with `--xaf-chip-top`, `--xaf-chip-right`, and `--xaf-chip-bottom` in its CSS: on X the free space is in the header row, left of the Grok and menu icons. Only a collapsed post and an error get a full row.
+- The score is a chip that floats over a corner of the post (`.xaf-bar` in `src/content.css`), so scoring never changes a post's height. A site moves it with `--xaf-chip-top`, `--xaf-chip-right`, and `--xaf-chip-bottom` in its CSS: on X the free space is in the header row, left of the Grok and menu icons. On Reddit comments the chip is inline in the comment's meta line instead (see "Where the score goes"). Only a collapsed post and an error get a full row.
 - X changes its DOM. Selectors are in `SEL` at the top of `src/content.js`.

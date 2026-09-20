@@ -9,6 +9,7 @@ Every release of Slop Filter. The format follows [Keep a Changelog](https://keep
 - The score is a small chip pinned to a corner of the post instead of a full row under it, so scoring a post no longer makes it taller. The AI and Human label buttons appear when the chip is hovered. A collapsed post still gets the full row.
 - Posts of 5 or more words are scored. The cutoff was 8, which let one and two phrase slop through.
 - The options page saves each setting the moment it changes. The Save button is gone.
+- On Reddit comments the score chip sits inline in the comment's meta line, to the right of Reddit's own badges under the username, instead of floating over the comment text. A collapsed comment still gets the full row in place of its text.
 
 ### Added
 

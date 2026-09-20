@@ -10,6 +10,8 @@
 
   const CLASS = Object.freeze({
     BAR: 'xaf-bar',
+    // A chip mounted in the site's own header line (see `chipHosts` in sites/x.js).
+    INLINE: 'xaf-inline',
     FLAGGED: 'xaf-flagged',
     ERROR: 'xaf-error',
     BUTTON: 'xaf-button',
@@ -74,6 +76,13 @@
     COLLAPSED_HEIGHT_PX: 28,
   });
   const ABORT_ERROR = 'AbortError';
+  const OWN_BAR = `:scope > .${CLASS.BAR}`;
+  // A host that grows by more than this with the chip inside did not keep its height.
+  const HOST_GROWTH_TOLERANCE_PX = 0.5;
+  // A site that wipes the chip out of its host this many times in a row, each within the
+  // window of the one before, is redrawing that host for good. The chip then floats over
+  // the item instead, so the two never race. One redraw now and then does not count up.
+  const HOST_LOSS = Object.freeze({ MAX_IN_A_ROW: 3, WINDOW_MS: 2000 });
   const SCAN_DOWN_FRAMES = [{ top: '0%' }, { top: '100%' }];
   const SCAN_UP_FRAMES = [{ top: '100%' }, { top: '0%' }];
 
@@ -85,6 +94,8 @@
   const labeled = new Map(); // post id -> label given this session
   const animated = new Set(); // post ids whose inspection already played
   const awaitingStage = new WeakMap(); // element -> post
+  const bars = new WeakMap(); // element -> its bar, which may be mounted outside the element
+  const hostLosses = new WeakMap(); // element -> { count, at } of chips the site wiped from a host
   const animating = new WeakSet();
   const seen = new WeakSet();
 
@@ -133,8 +144,12 @@
     const bar = document.createElement('div');
     bar.className = CLASS.BAR;
     bar.classList.toggle(CLASS.FLAGGED, isFlagged);
-    // Sites open the post on any click inside it.
-    bar.addEventListener('click', (event) => event.stopPropagation());
+    // Sites open the post on any click inside it. A chip in a site's header line can also
+    // sit inside a `summary` or a link, where a click would fold the comment or navigate.
+    bar.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    });
 
     const percent = Math.round(result.p * 100);
     const summary = document.createElement('span');
@@ -172,10 +187,58 @@
     return bar;
   }
 
+  function removeBars(parent) {
+    for (const bar of parent.querySelectorAll(OWN_BAR)) bar.remove();
+  }
+
   function clear(element) {
-    element.querySelector(`:scope > .${CLASS.BAR}`)?.remove();
+    // The tracked bar, wherever it is mounted.
+    bars.get(element)?.remove();
+    bars.delete(element);
+    // And one left in the item by an earlier copy of this script, after an extension reload.
+    removeBars(element);
     delete element.dataset[DATA.HIDE];
     element.dataset[DATA.BAR] = 'false';
+  }
+
+  // Where the adapter wants this item's chip, best spot first. Sites without the hook,
+  // and items whose chip kept getting wiped, get none.
+  function chipHosts(element) {
+    if ((hostLosses.get(element)?.count ?? 0) >= HOST_LOSS.MAX_IN_A_ROW) return [];
+    try {
+      return SITE.chipHosts?.(element) ?? [];
+    } catch (error) {
+      console.warn('[xaf]', error.message);
+      return [];
+    }
+  }
+
+  // Puts the chip in the first host where it shows up and the host keeps its height. A
+  // taller host means the chip wrapped or took a row of its own. Returns whether one fit.
+  function mountInline(element, bar) {
+    const hosts = chipHosts(element);
+    if (!hosts.length) return false;
+    // A chip left behind when the site rebuilt the item but kept its header.
+    for (const host of hosts) removeBars(host);
+    bar.classList.add(CLASS.INLINE);
+    for (const host of hosts) {
+      const heightBefore = host.getBoundingClientRect().height;
+      host.append(bar);
+      const isShown = bar.getClientRects().length > 0;
+      const grewBy = host.getBoundingClientRect().height - heightBefore;
+      if (isShown && grewBy <= HOST_GROWTH_TOLERANCE_PX) return true;
+    }
+    bar.remove();
+    bar.classList.remove(CLASS.INLINE);
+    return false;
+  }
+
+  // A visible item's chip goes in the site's header line when the adapter names one and it
+  // fits there. Everything else goes in the item: the row of a collapsed item stands in for
+  // its hidden text, an error needs the room, and the floating chip is the fallback.
+  function mount(element, bar, isFullRow) {
+    bars.set(element, bar);
+    if (isFullRow || !mountInline(element, bar)) element.append(bar);
   }
 
   // Scoring failed after its retries. The bar says why instead of showing a score.
@@ -187,7 +250,7 @@
     bar.className = `${CLASS.BAR} ${CLASS.ERROR}`;
     bar.textContent = `${TEXT.UPSTREAM_ERROR} \u00b7 ${error.message}`;
     if (error.detail) bar.title = error.detail;
-    element.append(bar);
+    mount(element, bar, true);
     element.dataset[DATA.BAR] = 'true';
   }
 
@@ -200,7 +263,9 @@
 
     const wantsBar = isFlagged || settings.labeling;
     element.dataset[DATA.BAR] = String(wantsBar);
-    if (wantsBar) element.append(buildBar(element, post, result, isFlagged, isHidden));
+    if (!wantsBar) return;
+    const isCollapsed = element.dataset[DATA.HIDE] === HIDE.COLLAPSE;
+    mount(element, buildBar(element, post, result, isFlagged, isHidden), isCollapsed);
   }
 
   async function resultFor(element, post) {
@@ -310,9 +375,7 @@
   }
 
   function fadeInBar(element) {
-    element
-      .querySelector(`:scope > .${CLASS.BAR}`)
-      ?.animate([{ opacity: 0 }, { opacity: 1 }], ANIMATION.BAR_FADE_MS);
+    bars.get(element)?.animate([{ opacity: 0 }, { opacity: 1 }], ANIMATION.BAR_FADE_MS);
   }
 
   // Scan while Jev decides. Pass: green fades in, holds, fades out, and the post stays.
@@ -428,6 +491,15 @@
     { rootMargin: PRELOAD_MARGIN },
   );
 
+  // A chip that vanished from a host was wiped by the site. Chips in the item are not counted.
+  function countHostLoss(element) {
+    if (!bars.get(element)?.classList.contains(CLASS.INLINE)) return;
+    const now = performance.now();
+    const last = hostLosses.get(element);
+    const isInARow = last && now - last.at < HOST_LOSS.WINDOW_MS;
+    hostLosses.set(element, { count: isInARow ? last.count + 1 : 1, at: now });
+  }
+
   function scan() {
     for (const element of document.querySelectorAll(SITE.itemSelector)) {
       if (!seen.has(element)) {
@@ -435,8 +507,8 @@
         viewport.observe(element);
       } else if (element.dataset[DATA.ID]) {
         // Re-apply when the site re-rendered the node (bar gone) or reused it for another post.
-        const lostBar =
-          element.dataset[DATA.BAR] === 'true' && !element.querySelector(`:scope > .${CLASS.BAR}`);
+        const lostBar = element.dataset[DATA.BAR] === 'true' && !bars.get(element)?.isConnected;
+        if (lostBar) countHostLoss(element);
         const isStale = SITE.extract(element)?.id !== element.dataset[DATA.ID];
         if (lostBar || isStale) process(element);
       }

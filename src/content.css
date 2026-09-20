@@ -52,6 +52,29 @@
   color: rgb(244, 93, 34);
 }
 
+/* A site can give the chip a home in its own header line instead (`chipHosts` in the
+   adapter). There it is an inline pill at the end of the line, not a floating one. It is
+   14px tall, buttons included, so it fits the 16px line of 12px meta text whether that
+   line is a flex row or plain inline text, and the line keeps its height. */
+.xaf-bar.xaf-inline {
+  position: static;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-self: center;
+  gap: 4px;
+  margin-left: 6px;
+  padding: 0 6px;
+  line-height: 14px;
+  vertical-align: middle;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.xaf-bar.xaf-inline .xaf-button {
+  padding: 0 6px;
+  line-height: 12px;
+}
+
 /* A collapsed post has nothing left but this, so here it is a full row with every
    control showing. An error message needs the room too. */
 [data-xaf-hide="collapse"] > .xaf-bar,

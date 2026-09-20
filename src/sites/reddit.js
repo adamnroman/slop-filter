@@ -9,8 +9,17 @@
 //   - an opened post:  its `[slot="text-body"]`. Only the text folds away.
 //   - a comment:       its `[slot="comment"]`. Only its text folds away, replies stay.
 //
+// A visible comment's score chip does not float over the text. It goes in the comment's
+// meta area, `[slot="commentMeta"]`, the username, time, and badges above the text: at the
+// end of the line that holds Reddit's own badges, else the line with the time, else the
+// meta area itself (see `chipHosts`). Posts keep the floating chip.
+//
 // This markup was taken from other open source Reddit extensions, not inspected live.
-// If scores stop showing up, check these selectors first.
+// If scores stop showing up, check these selectors first. The meta area comes from other
+// extensions' code on GitHub: a copy of Pangram's AI detector (spotdemo4/pangram-chrome,
+// which appends its badge to it), Reddit++ (lnm95/redditPlusPlus), RedditEnhancer
+// (joelacus/RedditEnhancer), and the user styles in Procyon-b/userCSS-userScript and
+// pnlpal/pnl-reader.
 (() => {
   const { readText, hash } = globalThis.XAF_DOM;
 
@@ -26,6 +35,11 @@
     BODY_IN_POST: '[slot="text-body"]',
     BODY_IN_COMMENT: '[slot="comment"]',
     TITLE: '[id^="post-title"], [slot="title"]',
+    COMMENT_META: '[slot="commentMeta"]',
+    // Reddit's own badges in a comment's meta area: pin and similar marks, user flair, and
+    // achievements such as "Top 1% Commenter".
+    META_BADGES: 'shreddit-comment-badges, author-flair-event-handler, community-achievements-flair',
+    META_TIME: '[noun="comment_time"]',
   });
   const ATTR = Object.freeze({ TITLE: 'post-title', AUTHOR: 'author', COMMENT_ID: 'thingid' });
   const ID_PREFIX = Object.freeze({ POST: 'reddit:post:', COMMENT: 'reddit:comment:' });
@@ -74,10 +88,31 @@
     return post ? postText(post) || null : null;
   }
 
+  // A comment's replies are nested inside it, each with a meta area of its own. The first
+  // one in the tree is this comment's own, unless it has none. So check whose it is.
+  function ownMeta(comment) {
+    const meta = comment.querySelector(SEL.COMMENT_META);
+    return meta?.closest(SEL.COMMENT) === comment ? meta : null;
+  }
+
+  // A visible comment's chip goes to the right of Reddit's badges, on their line. A comment
+  // with no badges gets it at the end of the line with the time. The core skips a host that
+  // grows taller with the chip inside, so a wrong guess here never adds a row.
+  function chipHosts(element) {
+    if (!element.matches(SEL.COMMENT_BODY)) return [];
+    const meta = ownMeta(element.closest(SEL.COMMENT));
+    if (!meta) return [];
+    const lastBadge = [...meta.querySelectorAll(SEL.META_BADGES)].at(-1);
+    const time = meta.querySelector(SEL.META_TIME);
+    const hosts = [lastBadge?.parentElement, time?.parentElement, meta].filter(Boolean);
+    return [...new Set(hosts)];
+  }
+
   globalThis.XAF_SITE = Object.freeze({
     name: 'reddit',
     itemSelector: `${SEL.FEED_CARD}, ${SEL.POST_BODY}, ${SEL.COMMENT_BODY}`,
     extract,
     parentText,
+    chipHosts,
   });
 })();
