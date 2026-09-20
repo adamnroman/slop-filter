@@ -4,20 +4,22 @@ Every release of Slop Filter. The format follows [Keep a Changelog](https://keep
 
 ## [Unreleased]
 
-### Changed
-
-- The score is a small chip pinned to a corner of the post instead of a full row under it, so scoring a post no longer makes it taller. The AI and Human label buttons appear when the chip is hovered. A collapsed post still gets the full row.
-- Posts of 5 or more words are scored. The cutoff was 8, which let one and two phrase slop through.
-- The options page saves each setting the moment it changes. The Save button is gone.
-- On Reddit comments the score chip sits inline in the comment's meta line, to the right of Reddit's own badges under the username, instead of floating over the comment text. A collapsed comment still gets the full row in place of its text.
+## [0.6.5] - 2026-09-20
 
 ### Added
 
 - Reddit support: feed posts, opened posts, and comments on www.reddit.com. A flagged comment folds its own text and leaves its replies visible.
-- A demo clip at the top of the README.
 - A tell for the insight reframe: "the hard part is...", "the real work is...", "what most people miss...". It runs on every post and carries a heavy starting weight.
 - Hover a post's percentage to see why it got that score: each check's pull, strongest first, and any reply-only questions that were not asked.
 - Live stats panel for demos: posts scanned, slop caught, last and average request time, questions answered, tokens, total cost, and cost per 1,000 posts. Off by default, on the options page.
+- A privacy policy, and a demo clip at the top of the README.
+
+### Changed
+
+- The score is a small chip instead of a full row under every post, so scoring a post no longer makes it taller. The AI and Human label buttons appear when the chip is hovered. A collapsed post still gets the full row.
+- Each site places the chip where it has room. On X it sits in the header row. On Reddit comments it sits inline, to the right of Reddit's own badges under the username.
+- Posts of 5 or more words are scored. The cutoff was 8, which let one and two phrase slop through.
+- The options page saves each setting the moment it changes. The Save button is gone.
 
 ## [0.6.4] - 2026-09-20
 
@@ -88,7 +90,8 @@ The first version in this repository. Versions 0.1.0 to 0.5.0 were development b
 - Retries with exponential backoff, then an `Upstream API error` line in the bar in place of the score.
 - An options page with the API key, threshold, flag mode, weights, a Reload extension button, and a warning when Chrome is running older code than the files on disk.
 
-[Unreleased]: https://github.com/adamnroman/slop-filter/compare/v0.6.4...HEAD
+[Unreleased]: https://github.com/adamnroman/slop-filter/compare/v0.6.5...HEAD
+[0.6.5]: https://github.com/adamnroman/slop-filter/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/adamnroman/slop-filter/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/adamnroman/slop-filter/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/adamnroman/slop-filter/compare/v0.6.1...v0.6.2

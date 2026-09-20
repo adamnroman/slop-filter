@@ -2,7 +2,7 @@
 
 The goal of this project is to collectively pursue an internet without having to sift through slop. It doesn't end at posts on X or comments on Reddit. It also means blocking bot accounts, YouTube and TikTok videos with AI-generated scripts, and whatever comes next.
 
-Today it is a Chrome extension that hides AI-generated posts on X and LinkedIn. Reddit support is in progress.
+Today it is a Chrome extension that hides AI-generated posts and comments on X, LinkedIn, and Reddit.
 
 ![Slop Filter scanning posts on X and LinkedIn: a scan line runs over each post, then it turns green and stays or red and folds away, while a side panel counts posts scanned, slop caught, request time, and cost.](docs/demo.gif)
 
@@ -21,7 +21,7 @@ Today it is a Chrome extension that hides AI-generated posts on X and LinkedIn. 
 4. The extension combines the answers into one score with weights. A small script fits those weights from the posts you labeled.
 5. Posts under 5 words are left alone. There is too little to judge.
 
-You bring your own TypeSafe API key. It stays in your browser. Post text is sent to TypeSafe for scoring and nowhere else. 1,000 posts cost about 4 cents.
+You bring your own TypeSafe API key. It stays in your browser. Post text is sent to TypeSafe for scoring and nowhere else. See the [privacy policy](PRIVACY.md). 1,000 posts cost about 4 cents.
 
 ## Install
 
