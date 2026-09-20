@@ -24,30 +24,13 @@ You bring your own TypeSafe API key. It stays in your browser. Post text is sent
 Paste this into Claude Code, Codex, or any coding agent:
 
 ```text
-Install the Slop Filter Chrome extension for me.
-
-1. Clone https://github.com/adamnroman/slop-filter into ~/slop-filter.
-   If that folder already exists, run `git pull` in it instead.
-2. If Node 20 or newer is installed, run `node --test` in the folder and
-   tell me if anything fails. If Node is missing, skip this step.
-3. Chrome does not let a script install an extension, so walk me through
-   the rest one step at a time. Wait for me to confirm each step:
-   a. Open chrome://extensions in Chrome.
-   b. Turn on "Developer mode" in the top right.
-   c. Click "Load unpacked" and pick the ~/slop-filter folder.
-      Print the full path so I can paste it.
-   d. On the Slop Filter card, click Details, then "Extension options".
-   e. Paste my TypeSafe API key and click Save. If I do not have a key,
-      send me to https://console.typesafe.ai/keys to create one.
-   f. Open x.com or linkedin.com and scroll. Every post of 8 or more words should get
-      a small "AI 12%" line under it.
-4. Never ask me to paste my API key into this chat. It goes only into
-   the extension's options page.
-5. Do not change any files in the repo.
+Read https://raw.githubusercontent.com/adamnroman/slop-filter/main/SKILL.md and follow it to install Slop Filter in my Chrome.
 ```
+
+Your agent clones the repo and walks you through the few clicks Chrome requires. Your API key goes into the extension's options page, never into the chat.
 
 Or do it by hand: clone this repo, open `chrome://extensions`, turn on Developer mode, click Load unpacked, pick the folder. Then open the extension's options and paste your [TypeSafe API key](https://console.typesafe.ai/keys).
 
 ## Tune it and contribute
 
-[docs/development.md](docs/development.md) covers how to fit the weights from your labels, add a question for a tell you noticed, and what to know before changing the code.
+[SKILL.md](SKILL.md) teaches your coding agent how to update it, add a tell you noticed, fit the weights from your labels, and add a site. [docs/development.md](docs/development.md) has the full detail.
