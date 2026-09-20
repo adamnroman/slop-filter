@@ -6,6 +6,7 @@ Every release of Slop Filter. The format follows [Keep a Changelog](https://keep
 
 ### Changed
 
+- The score is a small chip pinned to a corner of the post instead of a full row under it, so scoring a post no longer makes it taller. The AI and Human label buttons appear when the chip is hovered. A collapsed post still gets the full row.
 - Posts of 5 or more words are scored. The cutoff was 8, which let one and two phrase slop through.
 - The options page saves each setting the moment it changes. The Save button is gone.
 

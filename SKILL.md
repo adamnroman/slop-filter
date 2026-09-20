@@ -21,7 +21,7 @@ Chrome does not let a script install an extension. You do the file work, then wa
    3. Click "Load unpacked" and pick the folder. Print the full path so they can paste it.
    4. On the Slop Filter card, click Details, then "Extension options".
    5. Paste their TypeSafe API key. It saves on its own. No key yet: send them to https://console.typesafe.ai/keys.
-   6. Open x.com, linkedin.com, or reddit.com and scroll. Every post of 5 or more words gets a small `AI 12%` line under it. Posts over the threshold collapse to `Likely AI · 88% [Show]`.
+   6. Open x.com, linkedin.com, or reddit.com and scroll. Every post of 5 or more words gets a small `AI 12%` chip in one corner. Hover the chip for the AI and Human label buttons. Posts over the threshold collapse to `Likely AI · 88% [Show]`.
 4. Rules while installing:
    - Never ask the user to paste their API key into the chat. It goes only into the options page.
    - Do not change any files.

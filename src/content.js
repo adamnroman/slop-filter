@@ -13,6 +13,8 @@
     FLAGGED: 'xaf-flagged',
     ERROR: 'xaf-error',
     BUTTON: 'xaf-button',
+    // Label controls. Tucked away until the chip is hovered.
+    EXTRA: 'xaf-extra',
     ACTIVE: 'xaf-active',
     SCANLINE: 'xaf-scanline',
     SCAN_UP: 'xaf-scan-up',
@@ -159,23 +161,15 @@
       };
       const prompt = document.createElement('span');
       prompt.textContent = TEXT.LABEL_PROMPT;
-      bar.append(
+      const extras = [
         prompt,
         button(TEXT.LABEL_AI, onLabel(LABEL.AI), current === LABEL.AI),
         button(TEXT.LABEL_HUMAN, onLabel(LABEL.HUMAN), current === LABEL.HUMAN),
-      );
+      ];
+      for (const extra of extras) extra.classList.add(CLASS.EXTRA);
+      bar.append(...extras);
     }
     return bar;
-  }
-
-  // Animated mode: hold the bar's space before the post is on screen, so the post
-  // does not grow when the verdict bar arrives mid-animation.
-  function reserveBar(element) {
-    if (!settings.labeling || element.querySelector(`:scope > .${CLASS.BAR}`)) return;
-    const placeholder = document.createElement('div');
-    placeholder.className = CLASS.BAR;
-    element.append(placeholder);
-    element.dataset[DATA.BAR] = 'true';
   }
 
   function clear(element) {
@@ -413,7 +407,6 @@
     if (post.text.split(/\s+/).length < MIN_WORDS) return;
 
     if (wantsInspection(post)) {
-      reserveBar(element);
       awaitingStage.set(element, post);
       stage.observe(element);
       return;

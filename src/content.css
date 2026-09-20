@@ -8,26 +8,72 @@
   opacity: 0.25;
 }
 
+/* The score is a small chip pinned to a corner of the post. It floats over the post
+   instead of taking a row, so scoring a post never changes its height. A site's CSS can
+   move it with --xaf-chip-top, --xaf-chip-right, and --xaf-chip-bottom. */
+[data-xaf-bar="true"] {
+  position: relative;
+}
+
 .xaf-bar {
-  flex: 0 0 100%;
+  position: absolute;
+  top: var(--xaf-chip-top, auto);
+  right: var(--xaf-chip-right, 8px);
+  bottom: var(--xaf-chip-bottom, 4px);
+  z-index: 1;
   box-sizing: border-box;
-  /* Same height empty or full, so a reserved bar never resizes the post. */
-  min-height: 28px;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 4px 16px;
-  font: 12px/16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  gap: 6px;
+  padding: 1px 8px;
+  border-radius: 9999px;
+  font: 11px/16px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: rgb(113, 118, 123);
+  background: rgba(127, 127, 127, 0.14);
+  opacity: 0.8;
+}
+
+/* The label controls show up when the chip is hovered. The blur keeps them readable
+   if the wider chip covers some text. */
+.xaf-bar .xaf-extra {
+  display: none;
+}
+
+.xaf-bar:hover {
+  opacity: 1;
+  backdrop-filter: blur(8px);
+}
+
+.xaf-bar:hover .xaf-extra {
+  display: inline-block;
 }
 
 .xaf-bar.xaf-flagged {
-  justify-content: flex-start;
   color: rgb(244, 93, 34);
 }
 
+/* A collapsed post has nothing left but this, so here it is a full row with every
+   control showing. An error message needs the room too. */
+[data-xaf-hide="collapse"] > .xaf-bar,
 .xaf-bar.xaf-error {
+  position: static;
+  flex: 0 0 100%;
+  min-height: 28px;
+  gap: 8px;
+  padding: 4px 16px;
+  border-radius: 0;
+  font-size: 12px;
+  background: transparent;
+  opacity: 1;
+  backdrop-filter: none;
+}
+
+[data-xaf-hide="collapse"] > .xaf-bar .xaf-extra {
+  display: inline-block;
+}
+
+.xaf-bar.xaf-error {
+  justify-content: flex-end;
   font-family: ui-monospace, Menlo, monospace;
   color: rgb(255, 173, 31);
 }

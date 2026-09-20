@@ -2,3 +2,11 @@
 article[data-testid="tweet"]:has(> .xaf-bar) {
   flex-wrap: wrap;
 }
+
+/* A tweet's bottom right corner holds the bookmark and share icons, and its top right
+   corner holds the Grok and menu icons. The chip goes in the header row, left of those. */
+article[data-testid="tweet"] {
+  --xaf-chip-top: 10px;
+  --xaf-chip-right: 88px;
+  --xaf-chip-bottom: auto;
+}
