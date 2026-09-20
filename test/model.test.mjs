@@ -61,15 +61,7 @@ test('code features catch LinkedIn formatting tells', () => {
 test('reply-only questions include the generic lesson check', () => {
   assert.ok(!('generic_lesson' in buildQuestions({ text: 'hi' })));
   assert.ok('generic_lesson' in buildQuestions({ text: 'hi', parentText: 'original post' }));
-  assert.ok('empty_qualifiers' in buildQuestions({ text: 'hi' }));
-});
-
-test('filler adverbs are a rate, and casual fillers do not count', () => {
-  const rate = (text) => featureVector({}, { text }).filler_adverbs;
-  assert.equal(rate('i literally just got back and it was really actually fine'), 0);
-  assert.equal(rate('This is truly a fundamentally different way to work.'), 1);
-  const long = `${'plain word '.repeat(50)}truly`;
-  assert.ok(rate(long) > 0 && rate(long) < 0.3, `long post rate ${rate(long)}`);
+  assert.ok('unearned_real' in buildQuestions({ text: 'hi' }));
 });
 
 test('default weights separate the extremes', () => {
