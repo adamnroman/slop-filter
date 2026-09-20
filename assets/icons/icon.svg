@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-4 -4 56 56">
+  <!-- The options page mascot, light palette. The wider viewBox leaves the padding
+       the Chrome Web Store asks for around a 128px icon. -->
+  <circle cx="24" cy="24" r="21" fill="#6247ea" stroke="#231f33" stroke-width="2" />
+  <circle cx="16.5" cy="20" r="4.5" fill="#ffffff" />
+  <circle cx="31.5" cy="20" r="4.5" fill="#ffffff" />
+  <circle cx="17.5" cy="21" r="2" fill="#231f33" />
+  <circle cx="30.5" cy="21" r="2" fill="#231f33" />
+  <path d="M17 32 q3.5 -4 7 0 t7 0" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" />
+</svg>

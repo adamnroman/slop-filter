@@ -27,7 +27,7 @@ jobs:
         run: node --test
 
       - name: Build the extension zip
-        run: zip -r "slop-filter-$GITHUB_REF_NAME.zip" manifest.json options.html src assets LICENSE
+        run: node scripts/zip.mjs && cp dist/*.zip "slop-filter-$GITHUB_REF_NAME.zip"
 
       - name: Publish the GitHub Release
         env:

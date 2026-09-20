@@ -102,7 +102,8 @@ node scripts/release.mjs                 # check everything and tag a release (n
 ## Notes
 
 - The model is pinned to `jev-1.13.0` in `src/model.js`. Refit after changing it.
-- The API key lives in `chrome.storage.local`. Fine for a personal extension. Do not publish it to the store like this.
+- Each user brings their own TypeSafe API key. It lives in `chrome.storage.local` in their browser and is only ever sent to `api.typesafe.ai`. No key ships with the extension.
+- Chrome Web Store upload: `node scripts/zip.mjs` builds `dist/slop-filter-<version>.zip` with only the files Chrome needs. The store wants a higher `version` on every upload.
 - After any code change, reload the extension (options page: Reload extension, or the reload icon on `chrome://extensions`), then reload x.com. Reloading x.com alone keeps the old code. Bump the fourth number of `version` in `manifest.json` with each change (see Versions and releases) so the options page can warn when Chrome is behind.
 - X rewrites a tweet element's whole class list on every hover, which wipes any class an extension adds. State on the tweet element goes in data attributes (`DATA` in `src/content.js`). Classes are only for elements the extension creates.
 - Outside Animated mode, tweets are scored 1500px before they scroll into view, so flagged ones are already hidden when they arrive. Animated mode scores a tweet only when it enters the top three quarters of the viewport.
