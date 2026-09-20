@@ -2,61 +2,106 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Slop Filter</title>
-    <style>
-      body { font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 560px; margin: 32px auto; padding: 0 16px; }
-      label { display: block; margin-top: 20px; font-weight: 600; }
-      input[type="password"], select, textarea { width: 100%; box-sizing: border-box; margin-top: 4px; padding: 6px; font: inherit; }
-      textarea { height: 160px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
-      .hint { color: #666; font-weight: 400; font-size: 12px; }
-      .row { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
-      #status { color: #0a7d32; min-height: 1.5em; }
-      #stale { margin-top: 16px; padding: 10px 12px; border: 1px solid #b00020; border-radius: 6px; color: #b00020; }
-    </style>
+    <link rel="stylesheet" href="src/options.css" />
   </head>
   <body>
-    <h1>Slop Filter <span id="version" class="hint"></span></h1>
+    <main class="page">
+      <header class="masthead">
+        <svg class="mascot" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+          <circle class="mascot-body" cx="24" cy="24" r="21" />
+          <circle class="mascot-eye" cx="16.5" cy="20" r="4.5" />
+          <circle class="mascot-eye" cx="31.5" cy="20" r="4.5" />
+          <circle class="mascot-pupil" cx="17.5" cy="21" r="2" />
+          <circle class="mascot-pupil" cx="30.5" cy="21" r="2" />
+          <path class="mascot-mouth" d="M17 32 q3.5 -4 7 0 t7 0" />
+        </svg>
+        <h1>Slop Filter</h1>
+        <span id="version" class="pill"></span>
+      </header>
 
-    <div id="stale" hidden>
-      Chrome is running version <span id="runningVersion"></span>. The files on disk are version <span id="diskVersion"></span>. Reload the extension, then reload x.com.
-    </div>
+      <div id="stale" class="banner" role="alert" hidden>
+        <strong>Chrome is running old code.</strong>
+        Running version <span id="runningVersion"></span>. Files on disk are version <span id="diskVersion"></span>. Reload the extension, then reload your open tabs.
+      </div>
 
-    <label for="apiKey">TypeSafe API key</label>
-    <input id="apiKey" type="password" autocomplete="off" />
+      <section class="card" aria-labelledby="settingsTitle">
+        <h2 id="settingsTitle">Settings</h2>
 
-    <label for="threshold">Hide at or above <span id="thresholdValue"></span>%</label>
-    <input id="threshold" type="range" min="50" max="99" step="1" />
+        <div class="field">
+          <div class="field-head">
+            <label for="apiKey">TypeSafe API key</label>
+            <a class="hint" href="https://console.typesafe.ai/keys" target="_blank" rel="noopener noreferrer">Get a key</a>
+          </div>
+          <input id="apiKey" type="password" autocomplete="off" spellcheck="false" aria-describedby="apiKeyHint" />
+          <p id="apiKeyHint" class="hint">Stays in your browser. Post text goes to TypeSafe for scoring and nowhere else.</p>
+        </div>
 
-    <label for="mode">When a tweet is flagged</label>
-    <select id="mode">
-      <option value="collapse">Collapse it</option>
-      <option value="animated">Animated</option>
-      <option value="dim">Dim it</option>
-      <option value="badge">Only show a badge</option>
-    </select>
+        <div class="field">
+          <div class="field-head">
+            <label for="threshold">Hide posts at or above</label>
+            <span class="pill pill-accent"><span id="thresholdValue">75</span>%</span>
+          </div>
+          <input id="threshold" type="range" min="50" max="99" step="1" value="75" aria-describedby="thresholdHint" />
+          <div id="thresholdHint" class="scale hint">
+            <span>50%: hides more</span>
+            <span>99%: hides less</span>
+          </div>
+        </div>
 
-    <label><input id="labeling" type="checkbox" /> Show AI / Human label buttons on every scored tweet</label>
+        <div class="field">
+          <label for="mode">When a post is flagged</label>
+          <div class="select">
+            <select id="mode">
+              <option value="collapse">Collapse it</option>
+              <option value="animated">Animated</option>
+              <option value="dim">Dim it</option>
+              <option value="badge">Only show a badge</option>
+            </select>
+          </div>
+        </div>
 
-    <label for="weights">Weights JSON <span class="hint">Paste the output of scripts/fit.mjs. Leave empty for the defaults.</span></label>
-    <textarea id="weights" spellcheck="false"></textarea>
+        <div class="field field-switch">
+          <div>
+            <label for="labeling">Label buttons</label>
+            <p id="labelingHint" class="hint">Show AI and Human buttons on every scored post.</p>
+          </div>
+          <input id="labeling" class="switch" type="checkbox" role="switch" aria-describedby="labelingHint" />
+        </div>
 
-    <div class="row">
-      <button id="save">Save</button>
-      <span id="status"></span>
-    </div>
+        <details id="advanced" class="advanced">
+          <summary>Advanced</summary>
+          <div class="advanced-body">
+            <label for="weights">Weights JSON</label>
+            <textarea id="weights" spellcheck="false" aria-describedby="weightsHint"></textarea>
+            <p id="weightsHint" class="hint">Paste the output of scripts/fit.mjs. Leave empty for the defaults.</p>
+          </div>
+        </details>
 
-    <h2>Code changes</h2>
-    <p class="hint">Chrome keeps the extension's page scripts in memory. After any code change, reload the extension here, then reload x.com.</p>
-    <div class="row">
-      <button id="reloadExtension">Reload extension</button>
-    </div>
+        <div class="actions">
+          <button id="save" class="button button-primary" type="button">Save</button>
+          <span id="status" class="status" role="status" aria-live="polite"></span>
+        </div>
+      </section>
 
-    <h2>Labels</h2>
-    <p id="labelCounts"></p>
-    <div class="row">
-      <button id="exportLabels">Export labels.json</button>
-      <button id="clearLabels">Clear labels</button>
-    </div>
+      <section class="card card-small" aria-labelledby="labelsTitle">
+        <h2 id="labelsTitle">Labels</h2>
+        <p id="labelCounts"></p>
+        <div class="actions">
+          <button id="exportLabels" class="button" type="button">Export labels.json</button>
+          <button id="clearLabels" class="button button-danger" type="button">Clear labels</button>
+        </div>
+      </section>
+
+      <section class="card card-small" aria-labelledby="codeTitle">
+        <h2 id="codeTitle">Code changes</h2>
+        <p class="hint">Changed the code? Reload the extension here, then reload your open tabs.</p>
+        <div class="actions">
+          <button id="reloadExtension" class="button" type="button">Reload extension</button>
+        </div>
+      </section>
+    </main>
 
     <script src="src/constants.js"></script>
     <script src="src/options.js"></script>
