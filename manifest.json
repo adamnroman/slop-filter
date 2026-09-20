@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Slop Filter",
-  "version": "0.6.4.1",
+  "version": "0.6.4.2",
   "description": "Hides AI-generated posts on X and LinkedIn, scored by TypeSafe Jev.",
   "icons": {
     "16": "assets/icons/icon-16.png",

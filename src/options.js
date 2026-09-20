@@ -3,6 +3,10 @@
 
   const EXPORT_FILENAME = 'labels.json';
   const MANIFEST_PATH = 'manifest.json';
+  // Typing in the key field saves after this pause, so closing the tab right after a
+  // paste still keeps the key.
+  const TYPING_PAUSE_MS = 500;
+  const SAVED_NOTE_MS = 2000;
   const TEXT = Object.freeze({
     SAVED: 'Saved.',
     BAD_WEIGHTS: 'Weights must be JSON shaped like {"bias": number, "w": {...}}.',
@@ -13,10 +17,25 @@
   const STATUS_STATE = Object.freeze({ OK: 'ok', ERROR: 'error' });
 
   const $ = (id) => document.getElementById(id);
-  const status = (text, isError = false) => {
+
+  // Every simple setting: which element, which storage key, how to read it, and the
+  // event that means "the user is done changing it".
+  const FIELDS = Object.freeze([
+    { id: 'apiKey', key: STORE.API_KEY, event: 'input', pauseMs: TYPING_PAUSE_MS, read: (el) => el.value.trim() },
+    { id: 'threshold', key: STORE.THRESHOLD, event: 'change', read: (el) => Number(el.value) / 100 },
+    { id: 'mode', key: STORE.MODE, event: 'change', read: (el) => el.value },
+    { id: 'labeling', key: STORE.LABELING, event: 'change', read: (el) => el.checked },
+    { id: 'stats', key: STORE.STATS, event: 'change', read: (el) => el.checked },
+  ]);
+
+  let clearNote;
+  function status(text, isError = false) {
+    clearTimeout(clearNote);
     $('status').textContent = text;
     $('status').dataset.state = isError ? STATUS_STATE.ERROR : STATUS_STATE.OK;
-  };
+    // Errors stay until fixed. "Saved." fades out by itself.
+    if (!isError) clearNote = setTimeout(() => ($('status').textContent = ''), SAVED_NOTE_MS);
+  }
 
   // The weights field sits in a collapsed <details>. Open it so the error has something to point at.
   function revealWeights() {
@@ -49,7 +68,20 @@
     $('labelCounts').textContent = `${rows.length} labeled: ${ai} AI, ${rows.length - ai} human.`;
   }
 
-  async function save() {
+  // Settings save by themselves, one field at a time, the moment they change.
+  function saveOnChange({ id, key, event, pauseMs = 0, read }) {
+    let pending;
+    $(id).addEventListener(event, () => {
+      clearTimeout(pending);
+      pending = setTimeout(async () => {
+        await chrome.storage.local.set({ [key]: read($(id)) });
+        status(TEXT.SAVED);
+      }, pauseMs);
+    });
+  }
+
+  // Weights save when the field loses focus. Bad JSON is reported and nothing is saved.
+  async function saveWeights() {
     let weights;
     try {
       weights = parseWeights($('weights').value);
@@ -58,13 +90,6 @@
       revealWeights();
       return;
     }
-    await chrome.storage.local.set({
-      [STORE.API_KEY]: $('apiKey').value.trim(),
-      [STORE.THRESHOLD]: Number($('threshold').value) / 100,
-      [STORE.MODE]: $('mode').value,
-      [STORE.LABELING]: $('labeling').checked,
-      [STORE.STATS]: $('stats').checked,
-    });
     if (weights) await chrome.storage.local.set({ [STORE.WEIGHTS]: weights });
     else await chrome.storage.local.remove(STORE.WEIGHTS);
     status(TEXT.SAVED);
@@ -104,7 +129,8 @@
   $('threshold').addEventListener('input', () => {
     $('thresholdValue').textContent = $('threshold').value;
   });
-  $('save').addEventListener('click', save);
+  FIELDS.forEach(saveOnChange);
+  $('weights').addEventListener('change', saveWeights);
   $('exportLabels').addEventListener('click', exportLabels);
   $('clearLabels').addEventListener('click', clearLabels);
   $('reloadExtension').addEventListener('click', () => chrome.runtime.reload());

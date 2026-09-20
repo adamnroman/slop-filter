@@ -47,7 +47,7 @@ To add a site: write the adapter, add a `src/sites/<site>.css` for layout fixes 
 ## Install
 
 1. Open `chrome://extensions`, turn on Developer mode, click Load unpacked, pick this folder.
-2. Open the extension's options. Paste your TypeSafe API key. Save.
+2. Open the extension's options. Paste your TypeSafe API key. Settings save on their own.
 3. Open x.com.
 
 ## Make it accurate
@@ -60,7 +60,7 @@ The default weights are guesses. Labels fix that.
    - Prints precision and recall per threshold, measured on tweets the model did not train on.
    - Prints each feature's weight. A weight near 0 means that question is not helping.
    - Prints the weights JSON on stdout.
-4. Paste the weights JSON into the options page. Set the threshold to the one the script suggests. Save.
+4. Paste the weights JSON into Advanced on the options page and click outside the box. Set the threshold to the one the script suggests.
 
 ### Add a tell you noticed
 
