@@ -21,7 +21,7 @@ Today it is a Chrome extension that hides AI-generated posts on X and LinkedIn. 
 4. The extension combines the answers into one score with weights. A small script fits those weights from the posts you labeled.
 5. Posts under 5 words are left alone. There is too little to judge.
 
-You bring your own TypeSafe API key. It stays in your browser. Post text is sent to TypeSafe for scoring and nowhere else. 1,000 posts cost about 4 cents.
+You bring your own TypeSafe API key. It stays in your browser. Post text is sent to TypeSafe for scoring and nowhere else. See the [privacy policy](PRIVACY.md). 1,000 posts cost about 4 cents.
 
 ## Install
 
