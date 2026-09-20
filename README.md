@@ -1,4 +1,4 @@
-# X AI Filter
+# Slop Filter
 
 Chrome extension that hides tweets on x.com that are likely AI-generated. TypeSafe Jev scores each tweet, code combines the scores, and your labels tune the weights.
 

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "X AI Filter",
-  "version": "0.5.1",
+  "name": "Slop Filter",
+  "version": "0.5.2",
   "description": "Hides tweets on x.com that are likely AI-generated, scored by TypeSafe Jev.",
   "permissions": ["storage"],
   "host_permissions": ["https://api.typesafe.ai/*"],
