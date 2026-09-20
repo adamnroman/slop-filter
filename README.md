@@ -1,79 +1,53 @@
 # Slop Filter
 
-Chrome extension that hides tweets on x.com that are likely AI-generated. TypeSafe Jev scores each tweet, code combines the scores, and your labels tune the weights.
+A Chrome extension that hides AI-generated posts. It works on X today. LinkedIn, Reddit, and YouTube are next.
 
-## How it works
+## What it does
 
-1. `src/content.js` finds tweets near the viewport and reads their text. On a tweet page it also reads the post being replied to.
-2. `src/background.js` sends one request per tweet to Jev with every question in `src/model.js`. It holds the API key. The page never sees it.
-3. Jev returns a probability (Noul) or a level (Score) per question. `featureVector` puts each on 0..1.
-4. `probability` combines the features with logistic weights. A tweet at or above the threshold is collapsed, animated then collapsed, dimmed, or badged.
-5. With labeling on, each scored tweet gets `AI` and `Human` buttons. A click saves the tweet, its features, and your label.
+- Scores every post in your feed for how likely it is to be AI-written.
+- Collapses the ones over your threshold. One click shows a post again.
+- Animated mode lets you watch it work: a scan line runs over each post, then the post turns green and stays, or turns red and folds away.
+- Can be tuned to your own judgment. Mark posts as `AI` or `Human`, then fit the weights from your labels.
 
-Tweets under 8 words are never scored or hidden.
+## How it does it
 
-### Animated mode
+1. It reads the text of each post as it nears your screen.
+2. It asks [TypeSafe Jev](https://docs.typesafe.ai) about 14 narrow yes/no and rating questions about the text. Examples: does it use the "it's not X, it's Y" frame, does it open with praise, how generic is it, how much personal voice does it have.
+3. Jev answers each question with a probability. It writes no text and gives no opinions.
+4. The extension combines the answers into one score with weights. A small script fits those weights from the posts you labeled.
+5. Posts under 8 words are left alone. There is too little to judge.
 
-Options page: "When a tweet is flagged" > Animated.
-
-1. A tweet is scored when it comes on screen, not ahead of time. A blue-white scan line runs down the tweet, bounces off the bottom, runs back up, and keeps going while the Jev request is in flight. The first trip down always finishes. After that the line stops wherever it is the moment the answer lands.
-2. Below the threshold: green fades in over the whole tweet, holds, fades out. The tweet stays.
-3. At or above the threshold: red fades in over the whole tweet, then the container closes in on itself and lands on the collapsed bar.
-
-It plays once per tweet. Reload x.com to replay. Tweets that come on screen together start 150 ms apart, top first. Timings are in `ANIMATION` at the top of `src/content.js`. Colors are the `--xaf-*` variables in `src/content.css`.
-
-### When Jev fails
-
-- One scoring call makes the first attempt plus up to 3 retries, with exponential backoff: 0.5 s, 1 s, 2 s. A `retry-after` header is honored up to 4 s.
-- Retried: 429, 500, 502, 503, 504, network errors, and 10 s timeouts. Not retried: 400, 401, 403, 422.
-- After the last retry the tweet stays visible and its bar reads `Upstream API error · HTTP 429 Too Many Requests` (or the timeout, network, or missing key message). Hover the bar for the raw response body. The same text goes to the console as `[xaf]`.
-- Nothing is cached on failure and nothing pauses. The next tweets are scored as normal, and the failed tweet is scored again the next time X rebuilds it, usually when you scroll away and back.
+You bring your own TypeSafe API key. It stays in your browser. Post text is sent to TypeSafe for scoring and nowhere else. 1,000 posts cost about 4 cents.
 
 ## Install
 
-1. Open `chrome://extensions`, turn on Developer mode, click Load unpacked, pick this folder.
-2. Open the extension's options. Paste your TypeSafe API key. Save.
-3. Open x.com.
+Paste this into Claude Code, Codex, or any coding agent:
 
-## Make it accurate
+```text
+Install the Slop Filter Chrome extension for me.
 
-The default weights are guesses. Labels fix that.
-
-1. Browse with labeling on. Label tweets you are sure about, both AI and human. Aim for 100+ of each.
-2. Options page: Export `labels.json`.
-3. `node scripts/fit.mjs labels.json`
-   - Prints precision and recall per threshold, measured on tweets the model did not train on.
-   - Prints each feature's weight. A weight near 0 means that question is not helping.
-   - Prints the weights JSON on stdout.
-4. Paste the weights JSON into the options page. Set the threshold to the one the script suggests. Save.
-
-### Add a tell you noticed
-
-1. Add one question to `QUESTIONS` in `src/model.js`. One narrow judgment per question. Name the exact pattern and give two or three example phrasings. Jev reads the words as written.
-2. If code can detect it exactly (a character, a regex), add it to `CODE_FEATURES` instead.
-3. Add a starting weight to `DEFAULT_WEIGHTS`.
-4. Check it: `TYPESAFE_API_KEY=... node scripts/try.mjs "tweet text" "parent text"`
-5. Label more, refit. Keep the question if its weight is not near 0 and precision or recall went up.
-
-Labels saved before a question existed do not have that feature. Relabel or collect new ones before judging it.
-
-## Cost
-
-One request per tweet, about 1k input tokens. Jev 1.13 is $0.042 per million input tokens, so 1,000 tweets costs about 4 cents.
-
-## Commands
-
-```bash
-node --test                          # unit tests
-node scripts/try.mjs "text" ["parent"]   # one tweet through every question
-node scripts/fit.mjs labels.json     # fit weights from labels
+1. Clone https://github.com/adamnroman/slop-filter into ~/slop-filter.
+   If that folder already exists, run `git pull` in it instead.
+2. If Node 20 or newer is installed, run `node --test` in the folder and
+   tell me if anything fails. If Node is missing, skip this step.
+3. Chrome does not let a script install an extension, so walk me through
+   the rest one step at a time. Wait for me to confirm each step:
+   a. Open chrome://extensions in Chrome.
+   b. Turn on "Developer mode" in the top right.
+   c. Click "Load unpacked" and pick the ~/slop-filter folder.
+      Print the full path so I can paste it.
+   d. On the Slop Filter card, click Details, then "Extension options".
+   e. Paste my TypeSafe API key and click Save. If I do not have a key,
+      send me to https://console.typesafe.ai/keys to create one.
+   f. Open x.com and scroll. Every post of 8 or more words should get
+      a small "AI 12%" line under it.
+4. Never ask me to paste my API key into this chat. It goes only into
+   the extension's options page.
+5. Do not change any files in the repo.
 ```
 
-## Notes
+Or do it by hand: clone this repo, open `chrome://extensions`, turn on Developer mode, click Load unpacked, pick the folder. Then open the extension's options and paste your [TypeSafe API key](https://console.typesafe.ai/keys).
 
-- The model is pinned to `jev-1.13.0` in `src/model.js`. Refit after changing it.
-- The API key lives in `chrome.storage.local`. Fine for a personal extension. Do not publish it to the store like this.
-- After any code change, reload the extension (options page: Reload extension, or the reload icon on `chrome://extensions`), then reload x.com. Reloading x.com alone keeps the old code. Bump `version` in `manifest.json` with each change so the options page can warn when Chrome is behind.
-- X rewrites a tweet element's whole class list on every hover, which wipes any class an extension adds. State on the tweet element goes in data attributes (`DATA` in `src/content.js`). Classes are only for elements the extension creates.
-- Outside Animated mode, tweets are scored 1500px before they scroll into view, so flagged ones are already hidden when they arrive. Animated mode scores a tweet only when it enters the top three quarters of the viewport.
-- X changes its DOM. Selectors are in `SEL` at the top of `src/content.js`.
+## Tune it and contribute
+
+[docs/development.md](docs/development.md) covers how to fit the weights from your labels, add a question for a tell you noticed, and what to know before changing the code.
