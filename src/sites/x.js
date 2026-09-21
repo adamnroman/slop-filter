@@ -3,6 +3,7 @@
 //   name          short site id, saved on every label
 //   itemSelector  matches every element that might be a scorable post
 //   extract(el)   -> { id, handle, text } or null. Called often, so keep it cheap.
+//                 May add `isReply: true` for a reply whose parent might not be on the page.
 //   parentText(el, post) -> text of the post being replied to, or null. Called once.
 //   chipHosts(el) -> optional. Elements in the site's own header line that the score chip
 //                 may be mounted in, best spot first. The chip goes at the end of the first
@@ -25,6 +26,8 @@
   // answers the one right above it has a short piece of that line above its own avatar.
   const THREAD_LINE = Object.freeze({ WIDTH_PX: 2, MIN_HEIGHT_PX: 6, SLACK_PX: 2 });
   const STATUS_PATH = /^\/([^/]+)\/status\/(\d+)/;
+  // X labels a reply shown without the tweet it answers.
+  const REPLY_LABEL = 'Replying to @';
 
   let focal = { id: null, text: null, node: null };
 
@@ -34,7 +37,10 @@
     const textNode = article.querySelector(SEL.TEXT);
     // A tweet with no text of its own would otherwise pick up the quoted tweet's text.
     if (!match || !textNode || textNode.closest(SEL.QUOTE_CONTAINER)) return null;
-    return { id: match[2], handle: match[1], text: readText(textNode).trim() };
+    // The model will not treat a pivot as decisive on a reply it cannot check against
+    // the tweet it answers, so say when this is one.
+    const isReply = article.textContent.includes(REPLY_LABEL);
+    return { id: match[2], handle: match[1], text: readText(textNode).trim(), isReply };
   }
 
   function findFocal(statusId) {

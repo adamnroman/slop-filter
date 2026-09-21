@@ -77,8 +77,8 @@ async function classify(post) {
   const weights = stored ?? DEFAULT_WEIGHTS;
   return {
     features,
-    p: probability(features, weights),
-    why: explain(features, weights, asked),
+    p: probability(features, weights, post),
+    why: explain(features, weights, asked, post),
     usage: isFresh ? usage : null,
   };
 }

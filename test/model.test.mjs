@@ -3,13 +3,16 @@ import { test } from 'node:test';
 import { crossValidate, fit, precisionRecall, predict } from '../scripts/logistic.mjs';
 import {
   DEFAULT_WEIGHTS,
+  HARD_RULES,
   QUESTIONS,
   buildQuestions,
   buildState,
   explain,
   featureVector,
+  hardRule,
   probability,
   requestCostUsd,
+  weightedProbability,
 } from '../src/model.js';
 
 const MAX_SCORE_LEVELS = 10; // API limit
@@ -25,12 +28,53 @@ function answersAt(level) {
   );
 }
 
-test('the rules judge prose, so the replied-to post is not sent', () => {
-  // No current question looks at the parent. Text nobody asks about costs tokens and accuracy.
-  assert.ok(Object.values(QUESTIONS).every((question) => !question.needsParent));
+test('the replied-to post is sent only because one question checks the pivot against it', () => {
+  const needsParent = Object.entries(QUESTIONS).filter(([, question]) => question.needsParent).map(([id]) => id);
+  assert.deepEqual(needsParent, ['pivot_answers_parent']);
   assert.deepEqual(buildState({ text: 'hi' }), { post: { text: 'hi' } });
-  assert.deepEqual(buildState({ text: 'hi', parentText: 'the post above' }), { post: { text: 'hi' } });
-  assert.deepEqual(Object.keys(buildQuestions({ text: 'hi', parentText: 'p' })), Object.keys(QUESTIONS));
+  assert.deepEqual(buildState({ text: 'hi', parentText: 'the post above' }).parent, { text: 'the post above' });
+  assert.ok(!('pivot_answers_parent' in buildQuestions({ text: 'hi' })));
+  assert.ok('pivot_answers_parent' in buildQuestions({ text: 'hi', parentText: 'p' }));
+});
+
+const noul = (values) => Object.fromEntries(Object.entries(values).map(([id, value]) => [id, { type: 'noul', noul: value }]));
+
+test('a hard rule flags a short post on Jev\'s confidence alone', () => {
+  // The real answers Jev gave for "Grok is starting to compete on economics, not just benchmarks".
+  const post = { text: 'Grok is starting to compete on economics, not just benchmarks' };
+  const features = featureVector({ ...noul({ contrast_pivot: 0.86, reads_as_model: 0.38, stakes_inflation: 0.26, paint_words: 0.12 }), uniform_cadence: { type: 'score', score: 0.55 * 3 } }, post);
+  assert.ok(weightedProbability(features) < 0.5, 'the sum alone left it under half');
+  assert.deepEqual(hardRule(features, post), { id: 'unprompted_pivot', value: 0.86 });
+  assert.equal(probability(features, DEFAULT_WEIGHTS, post), 0.86);
+  assert.equal(explain(features, DEFAULT_WEIGHTS, undefined, post).hardRule.id, 'unprompted_pivot');
+});
+
+test('a pivot that answers something the post really said is not a hard rule', () => {
+  const reply = { text: 'it is economics, not benchmarks', parentText: 'Grok wins because of its benchmark scores.' };
+  const answering = featureVector(noul({ contrast_pivot: 0.9, pivot_answers_parent: 0.9 }), reply);
+  assert.ok(Math.abs(answering.unprompted_pivot - 0.09) < 1e-9);
+  assert.equal(hardRule(answering, reply), null);
+  assert.ok(probability(answering, DEFAULT_WEIGHTS, reply) < 0.1);
+
+  const unprompted = featureVector(noul({ contrast_pivot: 0.9, pivot_answers_parent: 0.05 }), reply);
+  assert.equal(hardRule(unprompted, reply).id, 'unprompted_pivot');
+  assert.ok(probability(unprompted, DEFAULT_WEIGHTS, reply) > 0.85);
+});
+
+test('a reply whose parent is not on the page cannot be checked, so the pivot is not decisive there', () => {
+  const blind = { text: 'it is economics, not benchmarks', isReply: true };
+  const features = featureVector(noul({ contrast_pivot: 0.9 }), blind);
+  assert.equal(hardRule(features, blind), null);
+  assert.ok(features.unprompted_pivot > 0, 'it still counts through the weighted sum');
+  assert.equal(hardRule(features, { text: blind.text }).id, 'unprompted_pivot', 'an original post has nothing to answer');
+});
+
+test('below the bar a hard rule is just a weight, and the other hard rules work the same way', () => {
+  const post = { text: 'x' };
+  assert.equal(hardRule(featureVector(noul({ contrast_pivot: 0.6 }), post), post), null);
+  assert.equal(hardRule(featureVector(noul({ assistant_residue: 0.95 }), post), post).id, 'assistant_residue');
+  assert.equal(hardRule(featureVector(noul({ announced_insight: 0.8, contrast_pivot: 0.9 }), post), post).id, 'unprompted_pivot', 'the strongest one is reported');
+  for (const id of HARD_RULES) assert.ok(id in DEFAULT_WEIGHTS.w, `${id} still has a weight for when it is below the bar`);
 });
 
 test('no rule judges meaning: the old meaning-based checks are gone', () => {

@@ -62,6 +62,20 @@ export const QUESTIONS = Object.freeze({
     },
   },
 
+  // Asked only when the replied-to post is known. Rejecting a point the other person made is
+  // a real answer. Rejecting one nobody made is the tell. Kept as its own question so Jev
+  // makes one judgment at a time, and code combines the two (see `unprompted_pivot`).
+  pivot_answers_parent: {
+    type: TYPE.NOUL,
+    needsParent: true,
+    instructions:
+      "`post.text` may reject an alternative, as in 'X, not Y' or \"it's not Y, it's X\". Is the rejected alternative, the Y, something that `parent.text` actually says, argues, or clearly implies?",
+    criteria: {
+      true: '`parent.text` states or clearly implies the rejected idea, so `post.text` is pushing back on something that was said.',
+      false: '`parent.text` does not say or imply it, so the writer raised the alternative themselves. Also false when `post.text` rejects nothing.',
+    },
+  },
+
   // Bucket B: false profundity.
   announced_insight: {
     type: TYPE.NOUL,
@@ -176,6 +190,34 @@ const CODE_FEATURES = Object.freeze({
   ...VOCAB_FEATURES,
 });
 
+// A pivot only counts in full when nobody raised the alternative it rejects. With the
+// replied-to post known, Jev's confidence in the pivot is discounted by its confidence that
+// the post really said the rejected idea. With no post to answer, the pivot stands as it is.
+function unpromptedPivot(features, post) {
+  const answersParent = post.parentText ? features.pivot_answers_parent : 0;
+  return features.contrast_pivot * (1 - answersParent);
+}
+
+// Hard rules. A weighted sum suits tells that add up. These do not add up: when Jev is
+// fairly confident of one, the post is flagged on that alone, however short it is, and
+// Jev's confidence becomes the score. Edit this list to change what counts as decisive.
+const HARD_RULE_BAR = 0.75;
+export const HARD_RULES = Object.freeze(['unprompted_pivot', 'assistant_residue', 'announced_insight']);
+
+// A reply whose parent is not on the page cannot be checked against it, so the pivot
+// cannot be a hard rule there. It still counts through the weighted sum.
+const isCheckable = (id, post) => id !== 'unprompted_pivot' || !post?.isReply || Boolean(post.parentText);
+
+// The strongest hard rule that fires, or null.
+export function hardRule(features, post = null) {
+  let best = null;
+  for (const id of HARD_RULES) {
+    const value = features[id] ?? 0;
+    if (value >= HARD_RULE_BAR && isCheckable(id, post) && value > (best?.value ?? 0)) best = { id, value };
+  }
+  return best;
+}
+
 // Hand-set starting point. Replace with the output of scripts/fit.mjs once labels exist.
 export const DEFAULT_WEIGHTS = Object.freeze({
   bias: -5.0,
@@ -185,7 +227,10 @@ export const DEFAULT_WEIGHTS = Object.freeze({
     sycophantic_opener: 0.8,
     // The source skill treats a single instance of the pivot as enough. On a short post
     // there is room for one or two tells, so the strong ones carry real weight.
-    contrast_pivot: 3.0,
+    unprompted_pivot: 3.0,
+    // Raw answers behind `unprompted_pivot`. Kept as features so labels record them.
+    contrast_pivot: 0,
+    pivot_answers_parent: 0,
     announced_insight: 2.0,
     invented_label: 0.9,
     stakes_inflation: 0.8,
@@ -246,30 +291,38 @@ export function featureVector(answers, post) {
   for (const [id, detect] of Object.entries(CODE_FEATURES)) {
     features[id] = detect(post.text);
   }
+  features.unprompted_pivot = unpromptedPivot(features, post);
   return features;
 }
 
 // Why a post got its score: every feature's pull on it, strongest first.
 // `askedIds` are the questions that were sent. A reply-only question that was not sent
 // reads as 0, and the breakdown says so instead of showing it as a "no".
-export function explain(features, weights = DEFAULT_WEIGHTS, askedIds = Object.keys(QUESTIONS)) {
+export function explain(features, weights = DEFAULT_WEIGHTS, askedIds = Object.keys(QUESTIONS), post = null) {
   const asked = new Set(askedIds);
   const rows = Object.entries(features).map(([id, value]) => {
     const weight = weights.w[id] ?? 0;
     return { id, value, weight, contribution: weight * value, asked: !(id in QUESTIONS) || asked.has(id) };
   });
   rows.sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution));
-  return { bias: weights.bias, rows };
+  return { bias: weights.bias, rows, hardRule: hardRule(features, post) };
 }
 
 export function sigmoid(z) {
   return 1 / (1 + Math.exp(-z));
 }
 
-export function probability(features, weights = DEFAULT_WEIGHTS) {
+// The weighted sum, before any hard rule. This is what scripts/fit.mjs fits.
+export function weightedProbability(features, weights = DEFAULT_WEIGHTS) {
   let z = weights.bias;
   for (const [id, value] of Object.entries(features)) {
     z += (weights.w[id] ?? 0) * value;
   }
   return sigmoid(z);
+}
+
+// A hard rule that fires sets the floor: the score is Jev's confidence in it, or the
+// weighted sum if that is higher.
+export function probability(features, weights = DEFAULT_WEIGHTS, post = null) {
+  return Math.max(weightedProbability(features, weights), hardRule(features, post)?.value ?? 0);
 }

@@ -80,7 +80,7 @@ The default weights are guesses. Labels fix that.
 
 ### What the rules judge
 
-Cadence and prose, not meaning. A person can be generic, restate the post they answer, or say nothing new. That is human slop and it must not be flagged as AI. So no rule asks whether a post is generic, engaged, or original, and the post being replied to is not sent to Jev at all.
+Cadence and prose, not meaning. A person can be generic, restate the post they answer, or say nothing new. That is human slop and it must not be flagged as AI. So no rule asks whether a post is generic, engaged, or original.
 
 The rules in `src/model.js` follow the three buckets of the [unpolish-ai-writing](https://github.com/wilu222/unpolish-ai-writing) skill (MIT), plus one group of our own:
 
@@ -88,6 +88,12 @@ The rules in `src/model.js` follow the three buckets of the [unpolish-ai-writing
 - **False profundity**: announcing its own insight ("The catch is...", "This is a useful inversion:"), invented concept labels, stakes inflation, unnamed authorities, three matching beats, verbless fragments, rhythm so uniform it reads rehearsed.
 - **Machine cadence**: synonym cycling, stacked one-line punchlines, dropped subjects, tidy bows, significance paint.
 - **Circumvention**: what a model does when told to avoid the known tells. The em dash becomes a colon, a semicolon, or a spaced hyphen, which people rarely use in casual posts. Polished prose gets a lone "lol" or all-lowercase letters bolted on.
+
+**Hard rules.** A weighted sum suits tells that add up. Some tells do not add up: they are decisive alone. `HARD_RULES` in `src/model.js` lists them (`unprompted_pivot`, `assistant_residue`, `announced_insight`). When Jev's confidence in one reaches `HARD_RULE_BAR` (0.75), the post is flagged on that alone, however short it is, and Jev's confidence becomes the score. Below the bar the same tell is an ordinary weight. The hover breakdown names the hard rule that fired.
+
+The pivot is only decisive when nobody raised the alternative it rejects. "It's economics, not benchmarks" is a real answer to a post about benchmarks, and a tell everywhere else. So when the replied-to post is known, a second question, `pivot_answers_parent`, asks whether that post actually says or implies the rejected idea, and code discounts the pivot by Jev's confidence that it does (`unprompted_pivot`). The two judgments are separate questions because Jev is weaker when one question needs two steps. This is the only reason the replied-to post is sent to Jev. A reply whose parent is not on the page (X labels these "Replying to") cannot be checked, so the pivot is not decisive there.
+
+`scripts/fit.mjs` fits the weighted sum only. Hard rules sit on top of it.
 
 `src/vocab.js` holds the skill's word tables as three tiers with its counting rules: one always-tier word is a nudge and two is the full signal, the cluster tier needs two together, and the density tier only counts when the text is soaked, about 3% of its words. Words that are only a tell in one sense ("quietly", "landscape", "robust", "lands") are not counted by code. They are examples in the `paint_words` question, where Jev can tell the senses apart.
 
