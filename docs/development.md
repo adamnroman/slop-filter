@@ -84,8 +84,8 @@ Cadence and prose, not meaning. A person can be generic, restate the post they a
 
 The rules in `src/model.js` follow the three buckets of the [unpolish-ai-writing](https://github.com/wilu222/unpolish-ai-writing) skill (MIT), plus one group of our own:
 
-- **Assistant residue**: chatbot leftovers, flattery openers, the not-X-it's-Y pivot.
-- **False profundity**: invented concept labels, stakes inflation, unnamed authorities, three matching beats, verbless fragments, rhythm so uniform it reads rehearsed.
+- **Assistant residue**: chatbot leftovers, flattery openers, and the contrast pivot in every order: "It's not X, it's Y", "X, not Y", "Y instead of X", "less X, more Y". Jev reads literally, so each order has to be named. Two real posts were missed when only the first form was.
+- **False profundity**: announcing its own insight ("The catch is...", "This is a useful inversion:"), invented concept labels, stakes inflation, unnamed authorities, three matching beats, verbless fragments, rhythm so uniform it reads rehearsed.
 - **Machine cadence**: synonym cycling, stacked one-line punchlines, dropped subjects, tidy bows, significance paint.
 - **Circumvention**: what a model does when told to avoid the known tells. The em dash becomes a colon, a semicolon, or a spaced hyphen, which people rarely use in casual posts. Polished prose gets a lone "lol" or all-lowercase letters bolted on.
 

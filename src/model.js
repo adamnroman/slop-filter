@@ -50,13 +50,28 @@ export const QUESTIONS = Object.freeze({
     instructions:
       "Does `post.text` open with flattery or a praise loop before saying anything of its own, such as 'Great question', 'Love this', 'What a fantastic breakdown', or 'This is such an important point'?",
   },
-  not_x_but_y: {
+  // The pivot comes in many orders. Jev reads literally, so every order is named:
+  // "X, not Y" and "Y instead of X" were both missed when only "It's not X, it's Y" was.
+  contrast_pivot: {
     type: TYPE.NOUL,
     instructions:
-      "Does `post.text` use a not-X-it's-Y pivot or stacked negations, such as \"It's not X, it's Y\", \"This isn't about X. It's about Y.\", or \"Not A. Not B. Just C.\"?",
+      "Does `post.text` make its point by setting it against an alternative it rejects, in any order, such as \"It's not X, it's Y\", 'X, not Y', 'Y instead of X', 'Y rather than X', 'less X, more Y', 'stops being X and becomes Y', or stacked negations like \"Not A. Not B. Just C.\"?",
+    criteria: {
+      true: "The writer brings up the rejected alternative themselves to sharpen the point, such as 'something a human can re-run, not a green check the agent wrote for itself' or 'a failure-modeling exercise instead of a code-coverage ritual'.",
+      false: "No such contrast, or a plain correction of a fact or of something another person actually said, such as 'the meeting is at 3, not 2' or 'I ordered tea, not coffee'.",
+    },
   },
 
   // Bucket B: false profundity.
+  announced_insight: {
+    type: TYPE.NOUL,
+    instructions:
+      "Does `post.text` label its own point as an insight before or while making it, such as 'This is a useful inversion:', 'The catch is...', 'The hard part is...', 'The trick is...', 'The key insight:', \"Here's the shift:\", or 'The real unlock is...'?",
+    criteria: {
+      true: 'A phrase frames what follows as the catch, the trick, the hard part, the shift, the inversion, the takeaway, or the unlock.',
+      false: "It just says the thing with no such framing, or the word is literal, such as a catch in a contract or a hard part of a physical object.",
+    },
+  },
   invented_label: {
     type: TYPE.NOUL,
     instructions:
@@ -168,7 +183,10 @@ export const DEFAULT_WEIGHTS = Object.freeze({
     reads_as_model: 2.5,
     assistant_residue: 2.0,
     sycophantic_opener: 0.8,
-    not_x_but_y: 1.6,
+    // The source skill treats a single instance of the pivot as enough. On a short post
+    // there is room for one or two tells, so the strong ones carry real weight.
+    contrast_pivot: 3.0,
+    announced_insight: 2.0,
     invented_label: 0.9,
     stakes_inflation: 0.8,
     vague_authority: 0.5,
