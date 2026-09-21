@@ -4,6 +4,10 @@ Every release of Slop Filter. The format follows [Keep a Changelog](https://keep
 
 ## [Unreleased]
 
+### Changed
+
+- On X, a reply shown under the post it answers, in the home timeline or on a status page, now gets that post as its parent, so the reply-only checks run on it. A person continuing their own thread is not treated as a reply.
+
 ## [0.6.5] - 2026-09-20
 
 ### Added
