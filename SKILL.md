@@ -1,6 +1,6 @@
 ---
 name: slop-filter
-description: Install, update, tune, or change Slop Filter, a Chrome extension that hides AI-generated posts on X, LinkedIn, and Reddit using TypeSafe Jev. Use when the user says "install Slop Filter", "set up slop filter", "update slop filter", "add a tell", "add a question", "add a site", "fit the weights", or is working in a clone of adamnroman/slop-filter.
+description: Install, update, tune, or change Slop Filter, a Chrome extension that hides AI-generated posts and comments on X, LinkedIn, Reddit, and YouTube using TypeSafe Jev. Use when the user says "install Slop Filter", "set up slop filter", "update slop filter", "add a tell", "add a question", "add a site", "fit the weights", or is working in a clone of adamnroman/slop-filter.
 ---
 
 # Slop Filter
@@ -21,7 +21,7 @@ Chrome does not let a script install an extension. You do the file work, then wa
    3. Click "Load unpacked" and pick the folder. Print the full path so they can paste it.
    4. On the Slop Filter card, click Details, then "Extension options".
    5. Paste their TypeSafe API key. It saves on its own. No key yet: send them to https://console.typesafe.ai/keys.
-   6. Open x.com, linkedin.com, or reddit.com and scroll. Every post of 5 or more words gets a small `AI 12%` chip in one corner. Hover the chip for the AI and Human label buttons. Posts over the threshold collapse to `Likely AI · 88% [Show]`.
+   6. Open x.com, linkedin.com, reddit.com, or a YouTube video's comments and scroll. Every post of 5 or more words gets a small `AI 12%` chip in one corner. Hover the chip for the AI and Human label buttons. Posts over the threshold collapse to `Likely AI · 88% [Show]`.
 4. Rules while installing:
    - Never ask the user to paste their API key into the chat. It goes only into the options page.
    - Do not change any files.
@@ -31,7 +31,7 @@ If nothing shows up: look for `[xaf]` warnings in the page console. A bar that r
 ## Update it
 
 1. `git pull` in the folder.
-2. The user opens the extension options and clicks "Reload extension", then reloads their open x.com, linkedin.com, and reddit.com tabs.
+2. The user opens the extension options and clicks "Reload extension", then reloads their open x.com, linkedin.com, reddit.com, and youtube.com tabs.
 
 Reloading the tab alone is not enough. Chrome keeps the extension's page scripts in memory until the extension itself is reloaded. The options page shows a red warning when the files on disk are newer than what Chrome is running.
 

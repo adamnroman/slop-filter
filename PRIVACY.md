@@ -6,7 +6,7 @@ Slop Filter is a browser extension that hides AI-generated posts. It has no serv
 
 ## What it reads
 
-On the sites it supports (x.com, linkedin.com, and reddit.com), it reads the text of posts and comments that are on or near your screen, along with the author's handle. When a post is a reply, it may also read the text of the post being replied to. It does not read your messages, your password, your cookies, or pages on any other site.
+On the sites it supports (x.com, linkedin.com, reddit.com, and youtube.com), it reads the text of posts and comments that are on or near your screen, along with the author's handle. When a post is a reply, it may also read the text of the post being replied to. For a YouTube comment that is the comment it replies to, or the video's title. It does not read your messages, your password, your cookies, or pages on any other site.
 
 ## What leaves your browser
 
