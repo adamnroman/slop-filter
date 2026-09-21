@@ -78,6 +78,21 @@ The default weights are guesses. Labels fix that.
    - Prints the weights JSON on stdout.
 4. Paste the weights JSON into Advanced on the options page and click outside the box. Set the threshold to the one the script suggests.
 
+### What the rules judge
+
+Cadence and prose, not meaning. A person can be generic, restate the post they answer, or say nothing new. That is human slop and it must not be flagged as AI. So no rule asks whether a post is generic, engaged, or original, and the post being replied to is not sent to Jev at all.
+
+The rules in `src/model.js` follow the three buckets of the [unpolish-ai-writing](https://github.com/wilu222/unpolish-ai-writing) skill (MIT), plus one group of our own:
+
+- **Assistant residue**: chatbot leftovers, flattery openers, the not-X-it's-Y pivot.
+- **False profundity**: invented concept labels, stakes inflation, unnamed authorities, three matching beats, verbless fragments, rhythm so uniform it reads rehearsed.
+- **Machine cadence**: synonym cycling, stacked one-line punchlines, dropped subjects, tidy bows, significance paint.
+- **Circumvention**: what a model does when told to avoid the known tells. The em dash becomes a colon, a semicolon, or a spaced hyphen, which people rarely use in casual posts. Polished prose gets a lone "lol" or all-lowercase letters bolted on.
+
+`src/vocab.js` holds the skill's word tables as three tiers with its counting rules: one always-tier word is a nudge and two is the full signal, the cluster tier needs two together, and the density tier only counts when the text is soaked, about 3% of its words. Words that are only a tell in one sense ("quietly", "landscape", "robust", "lands") are not counted by code. They are examples in the `paint_words` question, where Jev can tell the senses apart.
+
+The old meaning-based rules (generic content, missing voice, restates the post, generic lesson, insight reframe, unearned "real") were removed on 2026-09-21 as an experiment. They are in the git history before that date.
+
 ### Add a tell you noticed
 
 1. Add one question to `QUESTIONS` in `src/model.js`. One narrow judgment per question. Name the exact pattern and give two or three example phrasings. Jev reads the words as written.

@@ -16,7 +16,7 @@ Today it is a Chrome extension that hides AI-generated posts and comments on X, 
 ## How it does it
 
 1. It reads the text of each post as it nears your screen.
-2. It asks [TypeSafe Jev](https://docs.typesafe.ai) about 18 narrow yes/no and rating questions about the text. Examples: does it use the "it's not X, it's Y" frame, does it open with praise, how generic is it, how much personal voice does it have.
+2. It asks [TypeSafe Jev](https://docs.typesafe.ai) 17 narrow questions about how the text is written, not what it says. A person can be generic or repeat the post they answer, and that is not AI. The tells are in the cadence: the "it's not X, it's Y" pivot, three matching beats in a row, a tidy bow on the end, words that add importance and no information, and sentence rhythm so even it reads rehearsed. Plain code counts the rest: em dashes, the colons and semicolons models switch to when told to avoid them, and stock vocabulary.
 3. Jev answers each question with a probability. It writes no text and gives no opinions.
 4. The extension combines the answers into one score with weights. A small script fits those weights from the posts you labeled.
 5. Posts under 5 words are left alone. There is too little to judge.
@@ -44,6 +44,8 @@ Or do it by hand: clone this repo, open `chrome://extensions`, turn on Developer
 See [CHANGELOG.md](CHANGELOG.md) and the [releases page](https://github.com/adamnroman/slop-filter/releases). Each release has the extension as a zip you can unpack and load.
 
 ## Credits
+
+The detection rules, their examples, and the word lists are adapted from the [unpolish-ai-writing](https://github.com/wilu222/unpolish-ai-writing) skill by wilu222 (MIT), which removes these tells from text. Slop Filter uses the same tells to spot them.
 
 <a href="https://www.flaticon.com/free-icons/poop" title="poop icons">Poop icons created by HideMaru - Flaticon</a>
 
