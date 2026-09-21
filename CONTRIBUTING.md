@@ -2,7 +2,7 @@
 
 Thanks for helping. Right now we are looking for three kinds of contribution:
 
-1. **New social media sites.** YouTube is next, and old.reddit.com is open. Anything with a feed works.
+1. **New social media sites.** old.reddit.com, TikTok, and judging YouTube videos by their scripts are all open. Anything with a feed works.
 2. **Better recognition of AI-written posts.** A tell you noticed, turned into one question, or a sharper version of a question we already ask.
 3. **Making it more efficient.** Fewer tokens, fewer requests, faster results, same accuracy.
 
