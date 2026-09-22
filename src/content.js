@@ -41,6 +41,8 @@
     LABEL_PROMPT: 'Label:',
     UPSTREAM_ERROR: 'Upstream API error',
     WHY_NOT_ASKED: 'not asked, the post it replies to is unknown:',
+    WHY_HARD_RULE: 'hard rule, decisive alone:',
+    WHY_SUM: 'the weighted sum, shown for reference:',
   });
   const SETTING_KEYS = [STORE.THRESHOLD, STORE.MODE, STORE.LABELING, STORE.STATS];
   // Animated mode ends in the same collapsed state as collapse mode.
@@ -124,14 +126,19 @@
   // Hover text for the score: what pushed it up or down, strongest first.
   function whyText(result, percent) {
     if (!result.why) return '';
-    const { bias, rows } = result.why;
+    const { bias, rows, hardRule } = result.why;
     const signed = (n) => `${n < 0 ? '-' : '+'}${Math.abs(n).toFixed(2)}`;
     const pulls = rows
       .filter((row) => row.asked && Math.abs(row.contribution) >= WHY_MIN_PULL)
       .map((row) => `${signed(row.contribution)}  ${row.id}  (answer ${row.value.toFixed(2)} x weight ${row.weight})`);
     const skipped = rows.filter((row) => !row.asked).map((row) => row.id);
+    // A hard rule sets the score alone. The sum below it is only context.
+    const decisive = hardRule
+      ? [`${TEXT.WHY_HARD_RULE} ${hardRule.id} (Jev ${hardRule.value.toFixed(2)})`, TEXT.WHY_SUM]
+      : [];
     return [
       `Why ${percent}%`,
+      ...decisive,
       `${signed(bias)}  starting point`,
       ...pulls,
       skipped.length ? `${TEXT.WHY_NOT_ASKED} ${skipped.join(', ')}` : '',

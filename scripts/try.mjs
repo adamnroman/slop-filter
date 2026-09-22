@@ -8,7 +8,9 @@ import {
   buildQuestions,
   buildState,
   featureVector,
+  hardRule,
   probability,
+  weightedProbability,
 } from '../src/model.js';
 
 const API_KEY_ENV = 'TYPESAFE_API_KEY';
@@ -32,5 +34,8 @@ const features = featureVector(response.answers, post);
 for (const [name, value] of Object.entries(features)) {
   console.log(`${name.padEnd(24)} ${value.toFixed(2)}`);
 }
-console.log(`\np(AI) with default weights: ${probability(features).toFixed(3)}`);
+const decisive = hardRule(features, post);
+console.log(`\nweighted sum with default weights: ${weightedProbability(features).toFixed(3)}`);
+console.log(decisive ? `hard rule fired: ${decisive.id} (Jev ${decisive.value.toFixed(2)})` : 'no hard rule fired');
+console.log(`p(AI): ${probability(features, undefined, post).toFixed(3)}`);
 console.log(`model: ${response.model}, input tokens: ${response.usage.input_tokens}`);

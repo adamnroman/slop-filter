@@ -6,11 +6,13 @@ Every release of Slop Filter. The format follows [Keep a Changelog](https://keep
 
 ### Added
 
-- YouTube comments. Top comments are judged against the video's title and replies against the comment they answer. The score chip sits in the comment's header row, after the time.
+- YouTube comments. The score chip sits in the comment's header row, after the time. A flagged comment folds to one row and its replies stay visible.
 
 ### Changed
 
-- On X, a reply shown under the post it answers, in the home timeline or on a status page, now gets that post as its parent, so the reply-only checks run on it. A person continuing their own thread is not treated as a reply.
+- Hard rules. A few tells are decisive alone: a contrast pivot nobody prompted, chatbot leftovers, and an announced insight. When Jev is fairly confident of one, the post is flagged on that alone, however short it is, and the hover breakdown says which rule fired. A pivot that rejects something the replied-to post really said is an answer, not a tell, and Jev checks for that when the post is known.
+- The detection rules were replaced. They now judge cadence and prose, not meaning, so a person being generic or restating the post they answer is no longer held against them. The new rules follow the unpolish-ai-writing skill's three buckets (assistant residue, false profundity, machine cadence) and its word tiers, plus a circumvention group: colons, semicolons, and spaced hyphens standing in for the em dash, and casual markers bolted onto polished prose. The contrast pivot is recognized in every order ("X, not Y", "Y instead of X", "less X, more Y"), and a post that announces its own insight ("The catch is...") is a tell. Weights fitted to the old rules no longer apply. Labels saved under the old rules carry the old scores and need collecting again.
+- On X, a reply shown under the post it answers, in the home timeline or on a status page, is now linked to that post. The link is saved with labels. The current rules judge prose only, so it is not sent to Jev. A person continuing their own thread is not treated as a reply.
 
 ## [0.6.5] - 2026-09-20
 
