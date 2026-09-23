@@ -4,6 +4,8 @@ Every release of Slop Filter. The format follows [Keep a Changelog](https://keep
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-22
+
 ### Added
 
 - YouTube comments. The score chip sits in the comment's header row, after the time. A flagged comment folds to one row and its replies stay visible.
@@ -100,7 +102,8 @@ The first version in this repository. Versions 0.1.0 to 0.5.0 were development b
 - Retries with exponential backoff, then an `Upstream API error` line in the bar in place of the score.
 - An options page with the API key, threshold, flag mode, weights, a Reload extension button, and a warning when Chrome is running older code than the files on disk.
 
-[Unreleased]: https://github.com/adamnroman/slop-filter/compare/v0.6.5...HEAD
+[Unreleased]: https://github.com/adamnroman/slop-filter/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/adamnroman/slop-filter/compare/v0.6.5...v0.7.0
 [0.6.5]: https://github.com/adamnroman/slop-filter/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/adamnroman/slop-filter/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/adamnroman/slop-filter/compare/v0.6.2...v0.6.3
