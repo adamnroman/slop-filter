@@ -76,6 +76,32 @@ export const QUESTIONS = Object.freeze({
     },
   },
 
+  // Word formation. Tells in how words are made, not in sentence shape. A model packs an
+  // idea into a noun stack and uses it as a term everyone knows. A person says the idea.
+  compressed_coinage: {
+    type: TYPE.NOUL,
+    instructions:
+      "Does `post.text` pack an idea into a two or three word noun phrase and use it as if it were an established term, such as 'keep rate', 'review-rejection rate', 'pass rate' for whether tests pass, 'trust debt', 'decision latency', or 'context rot'?",
+    criteria: {
+      true: "A compact noun phrase stands in for a whole idea the writer never spells out, and it is not a term in common use. A person would say the idea: 'how much of the code is still there a week later', not 'keep rate'.",
+      false: 'The nouns are ordinary words used plainly, or the phrase is a real established term in that field, such as a product name, a job title, or a well-known metric.',
+    },
+  },
+  frame_presupposition: {
+    type: TYPE.NOUL,
+    instructions:
+      "Does `post.text` refer to a set, a half, or a frame the reader was never shown, such as 'the missing one is...', 'the other half is...', 'the real question is...', 'the part nobody talks about is...', or 'the second problem is...' with no first?",
+    criteria: {
+      true: 'The phrase presupposes a list, a pair, or a framing that appears nowhere in the post, so it does not make sense on a plain reading.',
+      false: 'The set or frame it refers to is in the post, or in an earlier sentence, so the reference makes sense.',
+    },
+  },
+  spotlight_formula: {
+    type: TYPE.NOUL,
+    instructions:
+      "Does `post.text` single out one detail with a casual-sounding praise formula, such as 'is the part that jumps out', \"is the part I'd steal\", 'is the underrated bit', 'is doing a lot of work here', 'is the real story', or 'is what stands out'?",
+  },
+
   // Bucket B: false profundity.
   announced_insight: {
     type: TYPE.NOUL,
@@ -89,7 +115,7 @@ export const QUESTIONS = Object.freeze({
   invented_label: {
     type: TYPE.NOUL,
     instructions:
-      "Does `post.text` coin a concept label and use it as if it were established, such as 'the X paradox', 'the X trap', 'the X creep', 'the X tax', or 'the X gap'?",
+      "Does `post.text` coin a label or a metaphor and use it as if it were established, such as 'the X paradox', 'the X trap', 'the X tax', 'the X gap', or a fresh metaphor treated as a known category, such as 'pass rates and shipping are different games'?",
   },
   stakes_inflation: {
     type: TYPE.NOUL,
@@ -142,6 +168,11 @@ export const QUESTIONS = Object.freeze({
     instructions:
       "Does `post.text` recap events in clauses with the first-person subject missing, such as 'Made the call. Fixed the bug. Went home.'?",
   },
+  engagement_close: {
+    type: TYPE.NOUL,
+    instructions:
+      "Does `post.text` end by fishing for replies with a generic prompt, such as 'Curious if anyone...', 'Would love to hear how others...', 'What do you think?', 'Anyone else seeing this?', or 'Thoughts?'",
+  },
   bow_tie_closer: {
     type: TYPE.NOUL,
     instructions:
@@ -193,7 +224,11 @@ export const QUESTIONS = Object.freeze({
   performed_casualness: {
     type: TYPE.NOUL,
     instructions:
-      "Does `post.text` bolt casual markers onto otherwise polished, structured prose, such as a lone 'lol', 'tbh', or 'ngl', all-lowercase text with flawless punctuation and parallel structure, or an emoji dropped at the end of a formal sentence?",
+      "Does `post.text` bolt casual markers onto prose that is otherwise precise, such as a lone 'lol', 'tbh', or 'ngl' on a polished paragraph, an emoji dropped at the end of a formal sentence, or all-lowercase text whose punctuation, terminology, and phrasing are exact?",
+    criteria: {
+      true: "The casual surface hides careful writing: every comma and colon is placed correctly, the terms are precise, and the phrasing is tidy, as in 'evals measure pass rate. the missing one is keep rate: how much generated code survives the week.'",
+      false: 'The text is casual through and through: loose punctuation, slang used naturally, run-ons, or slips, or it is plain formal prose with no casual markers.',
+    },
   },
 });
 
@@ -234,7 +269,13 @@ function unpromptedPivot(features, post) {
 // fairly confident of one, the post is flagged on that alone, however short it is, and
 // Jev's confidence becomes the score. Edit this list to change what counts as decisive.
 const HARD_RULE_BAR = 0.75;
-export const HARD_RULES = Object.freeze(['unprompted_pivot', 'assistant_residue', 'announced_insight']);
+export const HARD_RULES = Object.freeze([
+  'unprompted_pivot',
+  'assistant_residue',
+  'announced_insight',
+  'compressed_coinage',
+  'spotlight_formula',
+]);
 
 // The mirror of a hard rule. When Jev is this confident a person typed the post, no hard
 // rule may flag it on its own. The weighted sum still runs, with the human tells in it.
@@ -267,8 +308,10 @@ export function hardRule(features, post = null) {
 }
 
 // Hand-set starting point. Replace with the output of scripts/fit.mjs once labels exist.
+// The bias leans toward flagging: a short post shows one or two tells at most, and the
+// owner would rather hide a person now and then than let slop through.
 export const DEFAULT_WEIGHTS = Object.freeze({
-  bias: -5.0,
+  bias: -4.0,
   w: Object.freeze({
     reads_as_model: 2.5,
     assistant_residue: 2.0,
@@ -280,6 +323,10 @@ export const DEFAULT_WEIGHTS = Object.freeze({
     contrast_pivot: 0,
     pivot_answers_parent: 0,
     announced_insight: 2.0,
+    compressed_coinage: 3.0,
+    frame_presupposition: 1.5,
+    spotlight_formula: 1.5,
+    engagement_close: 1.0,
     invented_label: 0.9,
     stakes_inflation: 0.8,
     vague_authority: 0.5,

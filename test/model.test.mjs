@@ -45,7 +45,7 @@ test('a hard rule flags a short post on Jev\'s confidence alone', () => {
   // The real answers Jev gave for "Grok is starting to compete on economics, not just benchmarks".
   const post = { text: 'Grok is starting to compete on economics, not just benchmarks' };
   const features = featureVector({ ...noul({ contrast_pivot: 0.86, reads_as_model: 0.38, stakes_inflation: 0.26, paint_words: 0.12 }), uniform_cadence: { type: 'score', score: 0.55 * 3 } }, post);
-  assert.ok(weightedProbability(features) < 0.5, 'the sum alone left it under half');
+  assert.ok(weightedProbability(features) < 0.86, 'the sum alone would have scored it lower than Jev\'s confidence in the pivot');
   assert.deepEqual(hardRule(features, post), { id: 'unprompted_pivot', value: 0.86 });
   assert.equal(probability(features, DEFAULT_WEIGHTS, post), 0.86);
   assert.equal(explain(features, DEFAULT_WEIGHTS, undefined, post).hardRule.id, 'unprompted_pivot');
@@ -98,6 +98,28 @@ test('human typing shape is counted by code, casual vocabulary is not', () => {
   for (const id of ['repeated_word', 'stretched_letters', 'stacked_punctuation', 'typed_laugh', ...HUMAN_TELLS]) {
     assert.ok(DEFAULT_WEIGHTS.w[id] < 0, `${id} pulls the score down`);
   }
+});
+
+test('compressed coinages are a hard rule, and the word formation tells carry weight', () => {
+  const post = { text: 'evals measure pass rate. the missing one is keep rate: how much generated code survives the week.' };
+  const jev = { compressed_coinage: 0.88, frame_presupposition: 0.8, performed_casualness: 0.7, reads_as_model: 0.4, colon_semicolon_pivot: 0.5 };
+  const features = featureVector(noul(jev), post);
+  assert.deepEqual(hardRule(features, post), { id: 'compressed_coinage', value: 0.88 });
+  assert.ok(probability(features, DEFAULT_WEIGHTS, post) >= 0.88, 'the hard rule is the floor');
+  const below = featureVector(noul({ ...jev, compressed_coinage: 0.6 }), post);
+  assert.equal(hardRule(below, post), null, 'under the bar it is an ordinary weight');
+  assert.ok(probability(below, DEFAULT_WEIGHTS, post) > 0.5, 'the other tells still carry it over half');
+  for (const id of ['compressed_coinage', 'frame_presupposition', 'spotlight_formula', 'engagement_close']) {
+    assert.ok(id in QUESTIONS && DEFAULT_WEIGHTS.w[id] > 0, `${id} is asked and weighted`);
+  }
+  assert.ok(HARD_RULES.includes('compressed_coinage'));
+});
+
+test('a human tell still vetoes the coinage hard rule', () => {
+  const post = { text: 'the keep rate on this thing is sooooo bad lmao' };
+  const features = featureVector(noul({ compressed_coinage: 0.85, stretched_typing: 0.9 }), post);
+  assert.equal(hardRule(features, post), null);
+  assert.ok(probability(features, DEFAULT_WEIGHTS, post) < 0.5);
 });
 
 test('below the bar a hard rule is just a weight, and the other hard rules work the same way', () => {
