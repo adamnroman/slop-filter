@@ -42,6 +42,7 @@
     UPSTREAM_ERROR: 'Upstream API error',
     WHY_NOT_ASKED: 'not asked, the post it replies to is unknown:',
     WHY_HARD_RULE: 'hard rule, decisive alone:',
+    WHY_HUMAN_VETO: 'human tell, no hard rule may flag this:',
     WHY_SUM: 'the weighted sum, shown for reference:',
   });
   const SETTING_KEYS = [STORE.THRESHOLD, STORE.MODE, STORE.LABELING, STORE.STATS];
@@ -126,7 +127,7 @@
   // Hover text for the score: what pushed it up or down, strongest first.
   function whyText(result, percent) {
     if (!result.why) return '';
-    const { bias, rows, hardRule } = result.why;
+    const { bias, rows, hardRule, humanVeto } = result.why;
     const signed = (n) => `${n < 0 ? '-' : '+'}${Math.abs(n).toFixed(2)}`;
     const pulls = rows
       .filter((row) => row.asked && Math.abs(row.contribution) >= WHY_MIN_PULL)
@@ -135,7 +136,9 @@
     // A hard rule sets the score alone. The sum below it is only context.
     const decisive = hardRule
       ? [`${TEXT.WHY_HARD_RULE} ${hardRule.id} (Jev ${hardRule.value.toFixed(2)})`, TEXT.WHY_SUM]
-      : [];
+      : humanVeto
+        ? [`${TEXT.WHY_HUMAN_VETO} ${humanVeto.id} (Jev ${humanVeto.value.toFixed(2)})`]
+        : [];
     return [
       `Why ${percent}%`,
       ...decisive,

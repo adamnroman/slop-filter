@@ -4,12 +4,14 @@ import { crossValidate, fit, precisionRecall, predict } from '../scripts/logisti
 import {
   DEFAULT_WEIGHTS,
   HARD_RULES,
+  HUMAN_TELLS,
   QUESTIONS,
   buildQuestions,
   buildState,
   explain,
   featureVector,
   hardRule,
+  humanVeto,
   probability,
   requestCostUsd,
   weightedProbability,
@@ -67,6 +69,35 @@ test('a reply whose parent is not on the page cannot be checked, so the pivot is
   assert.equal(hardRule(features, blind), null);
   assert.ok(features.unprompted_pivot > 0, 'it still counts through the weighted sum');
   assert.equal(hardRule(features, { text: blind.text }).id, 'unprompted_pivot', 'an original post has nothing to answer');
+});
+
+test('a confident human tell vetoes a hard rule: the Opus 5.5 post', () => {
+  // Jev's real answers, with the pivot misread at 0.87. Then what the human questions should add.
+  const post = { text: 'Opus 5.5 is way, way, way better than Opus 5. Sorry about that model, please try this one.', isReply: true };
+  const jev = { contrast_pivot: 0.87, reads_as_model: 0.34, paint_words: 0.69, assistant_residue: 0.18, parallel_triad: 0.28, stakes_inflation: 0.27, manufactured_punchlines: 0.21, performed_casualness: 0.13 };
+  const before = featureVector({ ...noul(jev), uniform_cadence: { type: 'score', score: 0.21 * 3 } }, { text: post.text });
+  assert.equal(before.repeated_word, 1, 'code sees way, way, way');
+  const withHuman = featureVector({ ...noul({ ...jev, emphatic_repetition: 0.9 }), uniform_cadence: { type: 'score', score: 0.21 * 3 } }, { text: post.text });
+  assert.deepEqual(humanVeto(withHuman), { id: 'emphatic_repetition', value: 0.9 });
+  assert.equal(hardRule(withHuman, { text: post.text }), null, 'the pivot cannot be decisive against a human tell');
+  assert.ok(probability(withHuman, DEFAULT_WEIGHTS, { text: post.text }) < 0.2, 'the sum lands low once the human tells pull it down');
+  assert.equal(explain(withHuman, DEFAULT_WEIGHTS, undefined, { text: post.text }).humanVeto.id, 'emphatic_repetition');
+});
+
+test('human typing shape is counted by code, casual vocabulary is not', () => {
+  const code = (text) => featureVector({}, { text });
+  assert.equal(code('way, way, way better').repeated_word, 1);
+  assert.equal(code('no no no').repeated_word, 1);
+  assert.equal(code('the the typo').repeated_word, 0, 'twice is a typo, not emphasis');
+  assert.equal(code('soooo good').stretched_letters, 1);
+  assert.equal(code('see https://www.example.com/aaa now').stretched_letters, 0, 'URLs are ignored');
+  assert.equal(code('Hello, good evening!').stretched_letters, 0, 'double letters are English');
+  assert.equal(code('what?!').stacked_punctuation, 1);
+  assert.equal(code('lmaooo this').typed_laugh, 1);
+  assert.equal(code('tbh ngl kinda honestly').typed_laugh, 0, 'slang is vocabulary');
+  for (const id of ['repeated_word', 'stretched_letters', 'stacked_punctuation', 'typed_laugh', ...HUMAN_TELLS]) {
+    assert.ok(DEFAULT_WEIGHTS.w[id] < 0, `${id} pulls the score down`);
+  }
 });
 
 test('below the bar a hard rule is just a weight, and the other hard rules work the same way', () => {

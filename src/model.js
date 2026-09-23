@@ -55,10 +55,10 @@ export const QUESTIONS = Object.freeze({
   contrast_pivot: {
     type: TYPE.NOUL,
     instructions:
-      "Does `post.text` make its point by setting it against an alternative it rejects, in any order, such as \"It's not X, it's Y\", 'X, not Y', 'Y instead of X', 'Y rather than X', 'less X, more Y', 'stops being X and becomes Y', or stacked negations like \"Not A. Not B. Just C.\"?",
+      "Does `post.text` use the rhetorical pivot where the writer raises a framing nobody proposed only to reject it, in any order, such as \"It's not X, it's Y\", 'X, not Y', 'Y instead of X', 'less X, more Y', 'stops being X and becomes Y', or stacked negations like \"Not A. Not B. Just C.\"?",
     criteria: {
-      true: "The writer brings up the rejected alternative themselves to sharpen the point, such as 'something a human can re-run, not a green check the agent wrote for itself' or 'a failure-modeling exercise instead of a code-coverage ritual'.",
-      false: "No such contrast, or a plain correction of a fact or of something another person actually said, such as 'the meeting is at 3, not 2' or 'I ordered tea, not coffee'.",
+      true: "The rejected half is a framing the writer invented to sharpen the point, such as 'something a human can re-run, not a green check the agent wrote for itself' or 'a failure-modeling exercise instead of a code-coverage ritual'.",
+      false: "No such move. A comparison ('A is way better than B'), a recommendation ('sorry about that one, try this one'), a preference, a correction of a fact or of something the writer or another person actually said ('the meeting is at 3, not 2'), or plain negation ('this does not work') is not a pivot.",
     },
   },
 
@@ -157,6 +157,29 @@ export const QUESTIONS = Object.freeze({
     },
   },
 
+  // Human cadence. The mirror of the rest: tells that a person typed this. They live in
+  // the shape of the words, not the vocabulary. A model asked to sound casual reaches for
+  // slang; a person stretches, repeats, and mistypes. A confident yes vetoes a hard rule.
+  emphatic_repetition: {
+    type: TYPE.NOUL,
+    instructions:
+      "Does `post.text` repeat a word for emphasis, such as 'way, way, way better', 'no no no', 'so so good', 'very very slow', or 'never ever'?",
+  },
+  stretched_typing: {
+    type: TYPE.NOUL,
+    instructions:
+      "Does `post.text` show expression through the typing itself: stretched letters ('soooo', 'nooo', 'yesss'), a stack of punctuation ('!!!', '???', '?!'), shouted caps on a word or two ('this is INSANE'), or a laugh typed out ('lol', 'lmao', 'lmfao', 'haha', 'hahaha')?",
+    criteria: {
+      true: 'At least one of these is present and reads as the writer expressing themselves through how the words are typed.',
+      false: "None present. Casual vocabulary alone, such as 'tbh', 'ngl', 'honestly', or 'kinda', does not count: that is word choice, and models use it when told to sound casual.",
+    },
+  },
+  human_slips: {
+    type: TYPE.NOUL,
+    instructions:
+      "Does `post.text` contain a slip a person leaves and a model does not: a typo, a missing or doubled word, a mid-sentence self-correction ('wait, no', 'I mean', 'sorry, I meant'), a trailing thought ('idk', 'anyway'), or a sentence that gives up halfway?",
+  },
+
   // Circumvention: what a model does when told to avoid the well-known tells.
   colon_semicolon_pivot: {
     type: TYPE.NOUL,
@@ -187,6 +210,15 @@ const CODE_FEATURES = Object.freeze({
   colon_clauses: (text) => Math.min(1, (text.match(COLON_PIVOT) ?? []).length / COLON_FULL_HITS),
   // Quotes pasted from a chat window. Weak: phones type curly quotes by default.
   curly_quotes: (text) => (/[‘’“”]/.test(text) ? 1 : 0),
+  // Human typing shape. Negative weights: these pull a score down.
+  // The same word three or more times in a row, as in "way, way, way better".
+  repeated_word: (text) => (/\b(\p{L}+)(?:[\s,]+\1\b){2,}/iu.test(text) ? 1 : 0),
+  // A letter stretched to three or more, as in "soooo". URLs are removed first.
+  stretched_letters: (text) => (/\b\p{L}*([a-z])\1{2,}\p{L}*\b/iu.test(text.replace(/https?:\/\/\S+/g, '')) ? 1 : 0),
+  // A stack of ! or ? marks.
+  stacked_punctuation: (text) => (/[!?]{2,}/.test(text) ? 1 : 0),
+  // A typed laugh anywhere in the text.
+  typed_laugh: (text) => (/\b(?:lo+l|lmf?ao+|rofl|ha(?:ha)+h?|hehe+)\b/i.test(text) ? 1 : 0),
   ...VOCAB_FEATURES,
 });
 
@@ -204,12 +236,28 @@ function unpromptedPivot(features, post) {
 const HARD_RULE_BAR = 0.75;
 export const HARD_RULES = Object.freeze(['unprompted_pivot', 'assistant_residue', 'announced_insight']);
 
+// The mirror of a hard rule. When Jev is this confident a person typed the post, no hard
+// rule may flag it on its own. The weighted sum still runs, with the human tells in it.
+const HUMAN_VETO_BAR = 0.75;
+export const HUMAN_TELLS = Object.freeze(['emphatic_repetition', 'stretched_typing', 'human_slips']);
+
+// The strongest human tell over the bar, or null.
+export function humanVeto(features) {
+  let best = null;
+  for (const id of HUMAN_TELLS) {
+    const value = features[id] ?? 0;
+    if (value >= HUMAN_VETO_BAR && value > (best?.value ?? 0)) best = { id, value };
+  }
+  return best;
+}
+
 // A reply whose parent is not on the page cannot be checked against it, so the pivot
 // cannot be a hard rule there. It still counts through the weighted sum.
 const isCheckable = (id, post) => id !== 'unprompted_pivot' || !post?.isReply || Boolean(post.parentText);
 
-// The strongest hard rule that fires, or null.
+// The strongest hard rule that fires, or null. A confident human tell vetoes them all.
 export function hardRule(features, post = null) {
+  if (humanVeto(features)) return null;
   let best = null;
   for (const id of HARD_RULES) {
     const value = features[id] ?? 0;
@@ -253,6 +301,14 @@ export const DEFAULT_WEIGHTS = Object.freeze({
     vocab_always: 1.0,
     vocab_cluster: 0.7,
     vocab_density: 0.5,
+    // Human cadence. Negative: a person typed this.
+    emphatic_repetition: -2.0,
+    stretched_typing: -1.5,
+    human_slips: -1.5,
+    repeated_word: -1.5,
+    stretched_letters: -1.0,
+    stacked_punctuation: -0.6,
+    typed_laugh: -0.8,
   }),
 });
 
@@ -305,7 +361,7 @@ export function explain(features, weights = DEFAULT_WEIGHTS, askedIds = Object.k
     return { id, value, weight, contribution: weight * value, asked: !(id in QUESTIONS) || asked.has(id) };
   });
   rows.sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution));
-  return { bias: weights.bias, rows, hardRule: hardRule(features, post) };
+  return { bias: weights.bias, rows, hardRule: hardRule(features, post), humanVeto: humanVeto(features) };
 }
 
 export function sigmoid(z) {
