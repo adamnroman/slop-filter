@@ -4,6 +4,11 @@ Every release of Slop Filter. The format follows [Keep a Changelog](https://keep
 
 ## [Unreleased]
 
+### Changed
+
+- Human cadence tells. Repetition for emphasis, expression through the typing itself (stretched letters, stacked punctuation, caps, typed laughs), and slips now pull a score down, and a confident one stops any hard rule from flagging the post alone. Casual slang by itself does not count.
+- The contrast pivot is narrower: a comparison, a recommendation, a preference, or a correction is not a pivot.
+
 ## [0.7.0] - 2026-09-22
 
 ### Added
