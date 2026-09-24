@@ -41,9 +41,9 @@
     LABEL_PROMPT: 'Label:',
     UPSTREAM_ERROR: 'Upstream API error',
     WHY_NOT_ASKED: 'not asked, the post it replies to is unknown:',
-    WHY_HARD_RULE: 'hard rule, decisive alone:',
-    WHY_HUMAN_VETO: 'human tell, no hard rule may flag this:',
-    WHY_SUM: 'the weighted sum, shown for reference:',
+    WHY_HARD_RULE: 'gate 2, AI hard rule, decisive alone:',
+    WHY_HUMAN_VETO: 'gate 1, human tell, decisive alone:',
+    WHY_SUM: 'gate 3, the weighted sum, shown for reference:',
   });
   const SETTING_KEYS = [STORE.THRESHOLD, STORE.MODE, STORE.LABELING, STORE.STATS];
   // Animated mode ends in the same collapsed state as collapse mode.
@@ -137,7 +137,7 @@
     const decisive = hardRule
       ? [`${TEXT.WHY_HARD_RULE} ${hardRule.id} (Jev ${hardRule.value.toFixed(2)})`, TEXT.WHY_SUM]
       : humanVeto
-        ? [`${TEXT.WHY_HUMAN_VETO} ${humanVeto.id} (Jev ${humanVeto.value.toFixed(2)})`]
+        ? [`${TEXT.WHY_HUMAN_VETO} ${humanVeto.id} (Jev ${humanVeto.value.toFixed(2)})`, TEXT.WHY_SUM]
         : [];
     return [
       `Why ${percent}%`,

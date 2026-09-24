@@ -16,7 +16,7 @@ Today it is a Chrome extension that hides AI-generated posts and comments on X, 
 ## How it does it
 
 1. It reads the text of each post as it nears your screen.
-2. It asks [TypeSafe Jev](https://docs.typesafe.ai) 26 narrow questions about how the text is written, not what it says. A person can be generic or repeat the post they answer, and that is not AI. The tells are in the cadence: the "it's not X, it's Y" pivot, three matching beats in a row, a tidy bow on the end, words that add importance and no information, and sentence rhythm so even it reads rehearsed. Plain code counts the rest: em dashes, the colons and semicolons models switch to when told to avoid them, and stock vocabulary.
+2. It asks [TypeSafe Jev](https://docs.typesafe.ai) 30 narrow questions about how the text is written, not what it says. Human tells come first: an invented word, a joke, a stretched or repeated word, a typo. A confident one settles it as human. Then the AI tells. A person can be generic or repeat the post they answer, and that is not AI. The tells are in the cadence: the "it's not X, it's Y" pivot, three matching beats in a row, a tidy bow on the end, words that add importance and no information, and sentence rhythm so even it reads rehearsed. Plain code counts the rest: em dashes, the colons and semicolons models switch to when told to avoid them, and stock vocabulary.
 3. Jev answers each question with a probability. It writes no text and gives no opinions.
 4. The extension combines the answers into one score with weights. A small script fits those weights from the posts you labeled.
 5. Posts under 5 words are left alone. There is too little to judge.

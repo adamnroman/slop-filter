@@ -195,11 +195,48 @@ test('explain lists each pull, strongest first, and marks questions that were no
   assert.equal(rows.find((row) => row.id === 'em_dash').asked, true);
 });
 
-test('default weights separate the extremes', () => {
-  const human = probability(featureVector(answersAt(0.05), { text: 'lol no' }));
-  const ai = probability(featureVector(answersAt(0.9), { text: 'It is not X — it is Y.' }));
-  assert.ok(human < 0.1, `human-like scored ${human}`);
+// Every AI question at `level`, every human question at 0.
+function aiAnswersAt(level) {
+  const answers = answersAt(level);
+  for (const id of HUMAN_TELLS) answers[id] = { type: 'noul', noul: 0 };
+  answers.firsthand_specifics = { type: 'noul', noul: 0 };
+  return answers;
+}
+
+test('default weights separate the extremes, and an empty post is human', () => {
+  const nothing = probability(featureVector(aiAnswersAt(0.05), { text: 'plain words here' }));
+  const ai = probability(featureVector(aiAnswersAt(0.9), { text: 'It is not X \u2014 it is Y.' }));
+  assert.ok(nothing < 0.05, `no tells on either side scored ${nothing}, should be human`);
   assert.ok(ai > 0.9, `ai-like scored ${ai}`);
+});
+
+test('the gates run in order: human tell, then hard rule, then the sum', () => {
+  const post = { text: 'x' };
+  // Gate 1 beats gate 2, and the score is one minus the human confidence.
+  const both = featureVector(noul({ compressed_coinage: 0.95, invented_words: 0.8 }), post);
+  assert.equal(hardRule(both, post), null);
+  assert.ok(probability(both, DEFAULT_WEIGHTS, post) <= 0.2);
+  // Gate 2 alone.
+  const onlyAi = featureVector(noul({ compressed_coinage: 0.95 }), post);
+  assert.equal(probability(onlyAi, DEFAULT_WEIGHTS, post), 0.95);
+  // Firsthand specifics never settle it on their own: they only count through the sum.
+  const specifics = featureVector(noul({ compressed_coinage: 0.95, firsthand_specifics: 0.95 }), post);
+  assert.equal(hardRule(specifics, post).id, 'compressed_coinage');
+  assert.ok(!HUMAN_TELLS.includes('firsthand_specifics'));
+});
+
+test('this week\'s real posts, with Jev answers as guessed from the tells that fire', () => {
+  const verdict = (text, guess) => probability(featureVector(noul(guess), { text }), DEFAULT_WEIGHTS, { text });
+  // Human. Each one was flagged before the human tells existed.
+  assert.ok(verdict('Born to jestermaxx, forced to jevmaxx', { invented_words: 0.95, humor: 0.9, parallel_triad: 0.7, compressed_coinage: 0.8 }) < 0.1, 'jevmaxx');
+  assert.ok(verdict("I find the conversation around 'slop' code so fascinating because people have been slop-infrastructuring since the advent of cloud APIs.", { invented_words: 0.85, humor: 0.8, compressed_coinage: 0.79, paint_words: 0.5 }) < 0.25, 'slop-infrastructuring');
+  assert.ok(verdict('Opus 5.5 is way, way, way better than Opus 5. Sorry about that model, please try this one.', { emphatic_repetition: 0.9, contrast_pivot: 0.87, paint_words: 0.69 }) < 0.15, 'opus');
+  // AI. No human tell fires, so they fall through to the hard rules.
+  assert.ok(verdict('Grok is starting to compete on economics, not just benchmarks', { contrast_pivot: 0.86, reads_as_model: 0.38 }) >= 0.86, 'grok');
+  assert.ok(verdict('evals measure pass rate. the missing one is keep rate: how much generated code survives the week.', { compressed_coinage: 0.85, frame_presupposition: 0.8, performed_casualness: 0.7, unpolished_prose: 0.3 }) >= 0.85, 'keep rate');
+  assert.ok(verdict('2 seconds per restyle is the part that jumps out. design systems usually feel slow right when you need to try 10 directions', { spotlight_formula: 0.85, unpolished_prose: 0.4 }) >= 0.85, 'restyle');
+  // Ambiguous: a plain human update with nothing on either side stays human.
+  assert.ok(verdict('We moved the launch to Tuesday because the vendor slipped. Ping me if that breaks anything.', { reads_as_model: 0.3, firsthand_specifics: 0.6 }) < 0.1, 'plain update');
 });
 
 test('logistic fit learns a separable signal and ignores noise', () => {

@@ -5,6 +5,12 @@
 // post they answer, or say nothing new, and that is human slop, not AI. What gives a model
 // away is how it writes: staged pivots, manufactured rhythm, significance paint, tidy bows.
 //
+// Human first. A model can be told to avoid any AI tell named here, so that list is a
+// moving target. It cannot be told to be weird in a way it did not already have, so the
+// human list is stable. The decision runs in this order: a confident human tell settles it
+// as human; a confident AI tell (a hard rule) flags it; otherwise the weighted sum decides;
+// and with no tell on either side the post is human.
+//
 // The tells, their examples, and the word tiers in vocab.js come from the
 // unpolish-ai-writing skill (MIT, github.com/wilu222/unpolish-ai-writing): its three
 // buckets (assistant residue, false profundity, machine cadence) and its word tables.
@@ -188,9 +194,23 @@ export const QUESTIONS = Object.freeze({
     },
   },
 
-  // Human cadence. The mirror of the rest: tells that a person typed this. They live in
-  // the shape of the words, not the vocabulary. A model asked to sound casual reaches for
-  // slang; a person stretches, repeats, and mistypes. A confident yes vetoes a hard rule.
+  // Human tells, five groups. Yes on any of them pulls toward human, and a confident yes
+  // settles it. They live in the shape of the words, not the vocabulary: a model asked to
+  // sound casual reaches for slang; a person stretches, repeats, mistypes, jokes, and
+  // invents words no dictionary has.
+
+  // Group 1: invented words.
+  invented_words: {
+    type: TYPE.NOUL,
+    instructions:
+      "Does `post.text` use a made-up word or spelling that no dictionary or field has, such as 'jestermaxx', 'jevmaxx', suffix play like '-maxx', '-pilled', or '-core', a portmanteau, a deliberately mangled spelling, or an absurd compound like 'slop-infrastructuring'?",
+    criteria: {
+      true: 'At least one word is invented, and it reads playful, absurd, clumsy, or in-jokey. That is how a person coins a word.',
+      false: "Every word is real, or the only coinage is a tidy, plausible term used straight, such as 'keep rate' or 'decision latency'. That is how a model coins a word, and it is not a human tell.",
+    },
+  },
+
+  // Group 2: typing shape.
   emphatic_repetition: {
     type: TYPE.NOUL,
     instructions:
@@ -209,6 +229,40 @@ export const QUESTIONS = Object.freeze({
     type: TYPE.NOUL,
     instructions:
       "Does `post.text` contain a slip a person leaves and a model does not: a typo, a missing or doubled word, a mid-sentence self-correction ('wait, no', 'I mean', 'sorry, I meant'), a trailing thought ('idk', 'anyway'), or a sentence that gives up halfway?",
+  },
+
+  // Group 3: humor.
+  humor: {
+    type: TYPE.NOUL,
+    instructions:
+      "Is `post.text` making a joke: sarcasm, absurdity, deadpan exaggeration, a pun, a meme format used as a meme such as 'born to X, forced to Y' or 'nobody: / me:', or a coinage whose whole point is to be funny?",
+    criteria: {
+      true: 'The post is trying to be funny and the humor is its own, not a quoted joke. Dry or deadpan counts.',
+      false: "It is earnest, or the only lightness is a lone 'lol' or an emoji stuck on a serious sentence.",
+    },
+  },
+
+  // Group 4: specificity a model cannot fake. The weakest group, never decisive on its own:
+  // a reply bot mirrors specifics from the post it answers.
+  firsthand_specifics: {
+    type: TYPE.NOUL,
+    instructions:
+      "Does `post.text` state a concrete firsthand detail only its writer would know, such as something they did or saw, a number they measured, a named person, place, tool, or date from their own experience?",
+    criteria: {
+      true: "A detail from the writer's own life or work, stated as their own: 'our build broke twice on Friday', 'I paid $14 for it', 'my cousin in Leeds'.",
+      false: 'Only general statements, or specifics that could have been copied from the post it replies to or from common knowledge.',
+    },
+  },
+
+  // Group 5: unpolish.
+  unpolished_prose: {
+    type: TYPE.NOUL,
+    instructions:
+      'Is `post.text` unpolished in a way a person leaves and a model does not: uneven rhythm, a run-on, a sentence that trails off or gives up, no closing line, or lowercase with loose or missing punctuation?',
+    criteria: {
+      true: 'The text was typed and not edited: it wanders, stops short, or ignores punctuation, and no part of it is tidy.',
+      false: 'The text is clean throughout, or its casualness is a surface over exact punctuation and tidy phrasing.',
+    },
   },
 
   // Circumvention: what a model does when told to avoid the well-known tells.
@@ -245,7 +299,7 @@ const CODE_FEATURES = Object.freeze({
   colon_clauses: (text) => Math.min(1, (text.match(COLON_PIVOT) ?? []).length / COLON_FULL_HITS),
   // Quotes pasted from a chat window. Weak: phones type curly quotes by default.
   curly_quotes: (text) => (/[‘’“”]/.test(text) ? 1 : 0),
-  // Human typing shape. Negative weights: these pull a score down.
+  // Human typing shape. These pull a score toward human.
   // The same word three or more times in a row, as in "way, way, way better".
   repeated_word: (text) => (/\b(\p{L}+)(?:[\s,]+\1\b){2,}/iu.test(text) ? 1 : 0),
   // A letter stretched to three or more, as in "soooo". URLs are removed first.
@@ -265,9 +319,9 @@ function unpromptedPivot(features, post) {
   return features.contrast_pivot * (1 - answersParent);
 }
 
-// Hard rules. A weighted sum suits tells that add up. These do not add up: when Jev is
-// fairly confident of one, the post is flagged on that alone, however short it is, and
-// Jev's confidence becomes the score. Edit this list to change what counts as decisive.
+// Gate 2, hard rules. A weighted sum suits tells that add up. These do not add up: when
+// Jev is fairly confident of one, the post is flagged on that alone, however short it is,
+// and Jev's confidence becomes the score. Edit this list to change what counts as decisive.
 const HARD_RULE_BAR = 0.75;
 export const HARD_RULES = Object.freeze([
   'unprompted_pivot',
@@ -277,12 +331,20 @@ export const HARD_RULES = Object.freeze([
   'spotlight_formula',
 ]);
 
-// The mirror of a hard rule. When Jev is this confident a person typed the post, no hard
-// rule may flag it on its own. The weighted sum still runs, with the human tells in it.
+// Gate 1. When Jev is this confident a person typed the post, the post is human. No hard
+// rule and no sum may flag it. Firsthand specifics are left out: a reply bot mirrors the
+// specifics of the post it answers, so that group only counts through the sum.
 const HUMAN_VETO_BAR = 0.75;
-export const HUMAN_TELLS = Object.freeze(['emphatic_repetition', 'stretched_typing', 'human_slips']);
+export const HUMAN_TELLS = Object.freeze([
+  'invented_words',
+  'emphatic_repetition',
+  'stretched_typing',
+  'human_slips',
+  'humor',
+  'unpolished_prose',
+]);
 
-// The strongest human tell over the bar, or null.
+// The strongest decisive human tell, or null.
 export function humanVeto(features) {
   let best = null;
   for (const id of HUMAN_TELLS) {
@@ -308,10 +370,12 @@ export function hardRule(features, post = null) {
 }
 
 // Hand-set starting point. Replace with the output of scripts/fit.mjs once labels exist.
-// The bias leans toward flagging: a short post shows one or two tells at most, and the
-// owner would rather hide a person now and then than let slop through.
+// With no tell on either side the post is human, so the bias sits well below the
+// threshold. Strong AI tells carry weight of their own, and the hard rules flag on Jev's
+// confidence alone, so the owner's preference for a false positive over a miss lives
+// there and not in the bias.
 export const DEFAULT_WEIGHTS = Object.freeze({
-  bias: -4.0,
+  bias: -5.0,
   w: Object.freeze({
     reads_as_model: 2.5,
     assistant_residue: 2.0,
@@ -348,10 +412,15 @@ export const DEFAULT_WEIGHTS = Object.freeze({
     vocab_always: 1.0,
     vocab_cluster: 0.7,
     vocab_density: 0.5,
-    // Human cadence. Negative: a person typed this.
+    // Human tells. Negative: a person typed this. Gate 1 handles the confident cases;
+    // these carry the weaker answers through the sum.
+    invented_words: -2.0,
     emphatic_repetition: -2.0,
     stretched_typing: -1.5,
     human_slips: -1.5,
+    humor: -1.5,
+    firsthand_specifics: -0.8,
+    unpolished_prose: -1.2,
     repeated_word: -1.5,
     stretched_letters: -1.0,
     stacked_punctuation: -0.6,
@@ -424,8 +493,12 @@ export function weightedProbability(features, weights = DEFAULT_WEIGHTS) {
   return sigmoid(z);
 }
 
-// A hard rule that fires sets the floor: the score is Jev's confidence in it, or the
-// weighted sum if that is higher.
+// The gates, in order. A decisive human tell settles it as human, and the score is one
+// minus Jev's confidence in that tell. A hard rule sets the floor at Jev's confidence in
+// it. Otherwise the weighted sum decides, and with no tell on either side it lands near
+// zero: human by default.
 export function probability(features, weights = DEFAULT_WEIGHTS, post = null) {
+  const human = humanVeto(features);
+  if (human) return Math.min(weightedProbability(features, weights), 1 - human.value);
   return Math.max(weightedProbability(features, weights), hardRule(features, post)?.value ?? 0);
 }
