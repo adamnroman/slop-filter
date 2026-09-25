@@ -12,6 +12,7 @@ Today it is a Chrome and Firefox extension that hides AI-generated posts and com
 - Collapses the ones over your threshold. One click shows a post again.
 - Animated mode lets you watch it work: a scan line runs over each post, then the post turns green and stays, or turns red and folds away.
 - Can be tuned to your own judgment. Mark posts as `AI` or `Human`, then fit the weights from your labels.
+- Blocks accounts. After three flagged posts from one account it offers to block it. A blocked account's posts are hidden on sight and never scored again. Hover any score for a Block button, and manage the list on the options page.
 
 ## How it does it
 

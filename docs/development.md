@@ -118,6 +118,8 @@ The pivot is only decisive when nobody raised the alternative it rejects. "It's 
 
 `scripts/fit.mjs` fits the weighted sum only. Hard rules and the human veto sit on top of it.
 
+**Blocked accounts.** The background worker keeps a list keyed `site:handle` in `chrome.storage.local`, plus a count of flagged posts per account. Before any text is fetched or sent, the page asks whether the account is blocked; a blocked account's post folds at once with no Jev call. Every fresh flag counts against the account, and at `BLOCK_AFTER_FLAGS` (3) the flagged post carries an offer to block, repeated every 3 more flags until accepted. The hover controls on any score have a Block button. The options page lists blocked accounts with unblock, export, and import. This works on every site, not only YouTube.
+
 `src/vocab.js` holds the skill's word tables as three tiers with its counting rules: one always-tier word is a nudge and two is the full signal, the cluster tier needs two together, and the density tier only counts when the text is soaked, about 3% of its words. Words that are only a tell in one sense ("quietly", "landscape", "robust", "lands") are not counted by code. They are examples in the `paint_words` question, where Jev can tell the senses apart.
 
 The maintainer would rather hide a person now and then than let slop through. That preference lives in the hard rules and the AI weights, not in the starting point: the bias sits low so that a post with no tells is human.

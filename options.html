@@ -93,6 +93,17 @@
         </div>
       </section>
 
+      <section class="card card-small" aria-labelledby="blockedTitle">
+        <h2 id="blockedTitle">Blocked accounts</h2>
+        <p id="blockedCount" class="hint"></p>
+        <ul id="blockedList" class="blocked-list"></ul>
+        <div class="actions">
+          <button id="exportBlocked" class="button" type="button">Export blocked.json</button>
+          <label class="button" for="importBlocked">Import blocked.json</label>
+          <input id="importBlocked" type="file" accept="application/json" hidden />
+        </div>
+      </section>
+
       <section class="card card-small" aria-labelledby="labelsTitle">
         <h2 id="labelsTitle">Labels</h2>
         <p id="labelCounts"></p>
