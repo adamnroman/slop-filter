@@ -8,8 +8,14 @@ Every release of Slop Filter. The format follows [Keep a Changelog](https://keep
 
 - YouTube videos, on the home grid and in search results. A video is judged by its script: an excerpt of its captions from the first minute, scored with the questions about typing and punctuation left out. Videos without English captions are left alone.
 - Blocked accounts. After three flagged posts from one account, the flagged post offers to block it. A blocked account's posts fold on sight and are never scored. Hover any score for a Block button. The options page lists blocked accounts with unblock, export, and import. Works on every site.
-- OpenRouter as a way to reach Jev. Pick it on the options page and paste an OpenRouter key. Same model and same answers, billed to OpenRouter credits. The stats panel shows the cost OpenRouter reports.
 - Firefox support. The Firefox package is built from the same `manifest.json` as Chrome, with the Firefox differences applied at packaging time.
+
+## [0.8.1] - 2026-09-25
+
+### Added
+
+- OpenRouter as a way to reach Jev. Pick it on the options page and paste an OpenRouter key. Same model and same answers, billed to OpenRouter credits. The stats panel shows the cost OpenRouter reports.
+
 
 ## [0.8.0] - 2026-09-24
 
@@ -126,7 +132,8 @@ The first version in this repository. Versions 0.1.0 to 0.5.0 were development b
 - Retries with exponential backoff, then an `Upstream API error` line in the bar in place of the score.
 - An options page with the API key, threshold, flag mode, weights, a Reload extension button, and a warning when Chrome is running older code than the files on disk.
 
-[Unreleased]: https://github.com/adamnroman/slop-filter/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/adamnroman/slop-filter/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/adamnroman/slop-filter/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/adamnroman/slop-filter/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/adamnroman/slop-filter/compare/v0.6.5...v0.7.0
 [0.6.5]: https://github.com/adamnroman/slop-filter/compare/v0.6.4...v0.6.5
