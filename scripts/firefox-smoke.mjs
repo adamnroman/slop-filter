@@ -23,7 +23,7 @@ try {
   }
 
   try {
-    execFileSync('timeout', ['12s', 'npx', '--yes', 'web-ext@8.9.0', 'run', '--source-dir', staging, '--firefox', firefox, '--no-reload'], {
+    execFileSync('timeout', ['12s', 'npx', '--yes', 'web-ext@8.9.0', 'run', '--source-dir', staging, '--firefox', firefox, '--no-reload', '--start-url', 'https://x.com/'], {
       stdio: 'inherit',
     });
   } catch (error) {
