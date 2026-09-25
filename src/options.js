@@ -2,6 +2,7 @@
   const { STORE, LABEL, DEFAULTS } = globalThis.XAF;
 
   const EXPORT_FILENAME = 'labels.json';
+  const BLOCKED_FILENAME = 'blocked.json';
   const MANIFEST_PATH = 'manifest.json';
   // Typing in the key field saves after this pause, so closing the tab right after a
   // paste still keeps the key.
@@ -11,6 +12,10 @@
     SAVED: 'Saved.',
     BAD_WEIGHTS: 'Weights must be JSON shaped like {"bias": number, "w": {...}}.',
     CONFIRM_CLEAR: 'Delete every saved label?',
+    UNBLOCK: 'Unblock',
+    NO_BLOCKED: 'No blocked accounts. Hover a score and click Block, or accept the offer after a few flagged posts.',
+    BLOCKED_COUNT: (n) => `${n} blocked. Their posts are hidden on sight and never sent to Jev.`,
+    BAD_BLOCKED: 'blocked.json must be an object of {"site:handle": {"site", "handle"}} entries.',
   });
 
   // Styled in options.css via [data-state].
@@ -60,6 +65,7 @@
     $('stats').checked = stored[STORE.STATS] ?? DEFAULTS.stats;
     $('weights').value = stored[STORE.WEIGHTS] ? JSON.stringify(stored[STORE.WEIGHTS], null, 2) : '';
     showLabelCounts(stored[STORE.LABELS] ?? {});
+    showBlocked(stored[STORE.BLOCKED] ?? {});
   }
 
   function showLabelCounts(labels) {
@@ -110,6 +116,64 @@
     $('stale').hidden = false;
   }
 
+  function showBlocked(blocked) {
+    const list = $('blockedList');
+    list.replaceChildren();
+    const entries = Object.entries(blocked).sort((a, b) => (b[1].blocked_at ?? 0) - (a[1].blocked_at ?? 0));
+    $('blockedCount').textContent = entries.length ? TEXT.BLOCKED_COUNT(entries.length) : TEXT.NO_BLOCKED;
+    for (const [key, { site, handle }] of entries) {
+      const item = document.createElement('li');
+      const name = document.createElement('span');
+      name.textContent = `${site}: ${handle}`;
+      const unblock = document.createElement('button');
+      unblock.type = 'button';
+      unblock.className = 'button';
+      unblock.textContent = TEXT.UNBLOCK;
+      unblock.addEventListener('click', async () => {
+        const { [STORE.BLOCKED]: current = {} } = await chrome.storage.local.get(STORE.BLOCKED);
+        delete current[key];
+        await chrome.storage.local.set({ [STORE.BLOCKED]: current });
+        showBlocked(current);
+      });
+      item.append(name, unblock);
+      list.append(item);
+    }
+  }
+
+  function download(filename, data) {
+    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+    const link = Object.assign(document.createElement('a'), { href: url, download: filename });
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function exportBlocked() {
+    const { [STORE.BLOCKED]: blocked = {} } = await chrome.storage.local.get(STORE.BLOCKED);
+    download(BLOCKED_FILENAME, blocked);
+  }
+
+  // Merges the file into the list. Entries already there are kept.
+  async function importBlocked(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    let imported;
+    try {
+      imported = JSON.parse(await file.text());
+      const valid = imported && typeof imported === 'object' && !Array.isArray(imported)
+        && Object.values(imported).every((entry) => typeof entry?.site === 'string' && typeof entry?.handle === 'string');
+      if (!valid) throw new Error();
+    } catch {
+      status(TEXT.BAD_BLOCKED, true);
+      return;
+    }
+    const { [STORE.BLOCKED]: current = {} } = await chrome.storage.local.get(STORE.BLOCKED);
+    const merged = { ...imported, ...current };
+    await chrome.storage.local.set({ [STORE.BLOCKED]: merged });
+    showBlocked(merged);
+    status(TEXT.SAVED);
+    event.target.value = '';
+  }
+
   async function exportLabels() {
     const { [STORE.LABELS]: labels = {} } = await chrome.storage.local.get(STORE.LABELS);
     const url = URL.createObjectURL(
@@ -132,6 +196,8 @@
   FIELDS.forEach(saveOnChange);
   $('weights').addEventListener('change', saveWeights);
   $('exportLabels').addEventListener('click', exportLabels);
+  $('exportBlocked').addEventListener('click', exportBlocked);
+  $('importBlocked').addEventListener('change', importBlocked);
   $('clearLabels').addEventListener('click', clearLabels);
   $('reloadExtension').addEventListener('click', () => chrome.runtime.reload());
   load();

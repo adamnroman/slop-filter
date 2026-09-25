@@ -83,6 +83,50 @@ async function classify(post) {
   };
 }
 
+// Blocked accounts, keyed `site:handle`, and how many of each account's posts were flagged.
+// Read once, kept here, written on change. Every tab asks this worker, so they agree.
+const blockedKey = (site, handle) => `${site}:${handle}`;
+let accounts = null;
+
+async function loadAccounts() {
+  if (!accounts) {
+    const stored = await chrome.storage.local.get([STORE.BLOCKED, STORE.FLAG_COUNTS]);
+    accounts = { blocked: stored[STORE.BLOCKED] ?? {}, flagCounts: stored[STORE.FLAG_COUNTS] ?? {} };
+  }
+  return accounts;
+}
+
+const saveAccounts = () =>
+  chrome.storage.local.set({ [STORE.BLOCKED]: accounts.blocked, [STORE.FLAG_COUNTS]: accounts.flagCounts });
+
+async function isBlocked({ site, handle }) {
+  const { blocked } = await loadAccounts();
+  return Boolean(blocked[blockedKey(site, handle)]);
+}
+
+async function block({ site, handle }) {
+  await loadAccounts();
+  accounts.blocked[blockedKey(site, handle)] = { site, handle, blocked_at: Date.now() };
+  delete accounts.flagCounts[blockedKey(site, handle)];
+  await saveAccounts();
+}
+
+async function unblock({ key }) {
+  await loadAccounts();
+  delete accounts.blocked[key];
+  await saveAccounts();
+}
+
+// Counts a flagged post against its account. Returns the count, so the page can offer a
+// block once it reaches the threshold.
+async function countFlag({ site, handle }) {
+  await loadAccounts();
+  const key = blockedKey(site, handle);
+  accounts.flagCounts[key] = (accounts.flagCounts[key] ?? 0) + 1;
+  await saveAccounts();
+  return accounts.flagCounts[key];
+}
+
 // Label writes are read-modify-write on one key, so they run one at a time.
 let labelWrites = Promise.resolve();
 
@@ -95,9 +139,22 @@ function saveLabel({ post, features, label }) {
   return labelWrites;
 }
 
+// Scores a post and counts a flag against its account. The page checks the block list
+// first, before it fetches or sends any text.
+async function classifyAndCount({ post, threshold }) {
+  const result = await classify(post);
+  const isFresh = Boolean(result.usage);
+  if (isFresh && post.handle && result.p >= threshold) result.flagCount = await countFlag(post);
+  return result;
+}
+
 const HANDLERS = {
-  [MSG.CLASSIFY]: ({ post }) => classify(post),
+  [MSG.CLASSIFY]: (message) => classifyAndCount(message),
+  [MSG.IS_BLOCKED]: ({ post }) => isBlocked(post),
   [MSG.LABEL]: (message) => saveLabel(message),
+  [MSG.BLOCK]: ({ post }) => block(post),
+  [MSG.UNBLOCK]: (message) => unblock(message),
+  [MSG.BLOCKED_LIST]: async () => (await loadAccounts()).blocked,
 };
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {

@@ -4,6 +4,10 @@ globalThis.XAF = Object.freeze({
   MSG: Object.freeze({
     CLASSIFY: 'xaf/classify',
     LABEL: 'xaf/label',
+    IS_BLOCKED: 'xaf/is-blocked',
+    BLOCK: 'xaf/block',
+    UNBLOCK: 'xaf/unblock',
+    BLOCKED_LIST: 'xaf/blocked-list',
   }),
   STORE: Object.freeze({
     API_KEY: 'apiKey',
@@ -13,6 +17,8 @@ globalThis.XAF = Object.freeze({
     STATS: 'stats',
     WEIGHTS: 'weights',
     LABELS: 'labels',
+    BLOCKED: 'blocked',
+    FLAG_COUNTS: 'flagCounts',
   }),
   MODE: Object.freeze({
     COLLAPSE: 'collapse',
@@ -21,6 +27,8 @@ globalThis.XAF = Object.freeze({
     BADGE: 'badge',
   }),
   LABEL: Object.freeze({ AI: 1, HUMAN: 0 }),
+  // Flagged posts from one account before the extension offers to block it.
+  BLOCK_AFTER_FLAGS: 3,
   DEFAULTS: Object.freeze({
     threshold: 0.75,
     mode: 'collapse',

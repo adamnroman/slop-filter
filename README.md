@@ -2,7 +2,7 @@
 
 The goal of this project is to collectively pursue an internet without having to sift through slop. It doesn't end at posts on X or comments on Reddit. It also means blocking bot accounts, YouTube and TikTok videos with AI-generated scripts, and whatever comes next.
 
-Today it is a Chrome extension that hides AI-generated posts and comments on X, LinkedIn, and Reddit, and comments on YouTube.
+Today it is a Chrome extension that hides AI-generated posts and comments on X, LinkedIn, and Reddit, and comments and videos on YouTube. A video is judged by its script, never by its title or thumbnail.
 
 ![Slop Filter scanning posts on X and LinkedIn: a scan line runs over each post, then it turns green and stays or red and folds away, while a side panel counts posts scanned, slop caught, request time, and cost.](docs/demo.gif)
 
@@ -12,6 +12,7 @@ Today it is a Chrome extension that hides AI-generated posts and comments on X, 
 - Collapses the ones over your threshold. One click shows a post again.
 - Animated mode lets you watch it work: a scan line runs over each post, then the post turns green and stays, or turns red and folds away.
 - Can be tuned to your own judgment. Mark posts as `AI` or `Human`, then fit the weights from your labels.
+- Blocks accounts. After three flagged posts from one account it offers to block it. A blocked account's posts are hidden on sight and never scored again. Hover any score for a Block button, and manage the list on the options page.
 
 ## How it does it
 

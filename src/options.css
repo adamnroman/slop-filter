@@ -443,3 +443,28 @@ input[type='range']:focus-visible::-webkit-slider-thumb {
     transition: none !important;
   }
 }
+
+.blocked-list {
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.blocked-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--track);
+}
+
+.blocked-list li:last-child {
+  border-bottom: 0;
+}
+
+label.button {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
