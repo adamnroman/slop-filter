@@ -4,6 +4,8 @@ Every release of Slop Filter. The format follows [Keep a Changelog](https://keep
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-09-24
+
 ### Changed
 
 - Human first. Human tells now settle a post on their own: an invented word, a joke, repetition for emphasis, a stretched word, a typo, or unpolished prose, when Jev is confident of it, makes the post human and no AI rule can override it. Then the AI hard rules, then the weighted sum. With no tell on either side a post is human. Three real human posts flagged as AI in one day prompted this.
@@ -117,7 +119,8 @@ The first version in this repository. Versions 0.1.0 to 0.5.0 were development b
 - Retries with exponential backoff, then an `Upstream API error` line in the bar in place of the score.
 - An options page with the API key, threshold, flag mode, weights, a Reload extension button, and a warning when Chrome is running older code than the files on disk.
 
-[Unreleased]: https://github.com/adamnroman/slop-filter/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/adamnroman/slop-filter/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/adamnroman/slop-filter/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/adamnroman/slop-filter/compare/v0.6.5...v0.7.0
 [0.6.5]: https://github.com/adamnroman/slop-filter/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/adamnroman/slop-filter/compare/v0.6.3...v0.6.4
