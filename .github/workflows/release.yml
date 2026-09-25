@@ -24,7 +24,13 @@ jobs:
         run: node scripts/changelog.mjs "$GITHUB_REF_NAME" > release-notes.md
 
       - name: Run the tests
-        run: node --test
+        run: npm test
+
+      - name: Install Firefox for runtime smoke test
+        run: sudo apt-get update && sudo apt-get install -y firefox-esr
+
+      - name: Validate the Firefox package and load it in Firefox
+        run: FIREFOX_BIN=$(command -v firefox-esr) npm run test:firefox
 
       - name: Build Chrome and Firefox extension zips
         run: |

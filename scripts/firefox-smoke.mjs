@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Firefox package validation and optional runtime smoke test.
-import { execFileSync, spawn } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -19,23 +19,17 @@ try {
 
   const firefox = process.env.FIREFOX_BIN;
   if (!firefox || !existsSync(firefox)) {
-    console.log('Firefox runtime smoke test skipped; set FIREFOX_BIN to a Firefox executable to run it.');
-    process.exit(0);
+    throw new Error('Firefox runtime smoke test requires FIREFOX_BIN to point to a Firefox executable');
   }
 
-  await new Promise((resolve, reject) => {
-    const child = spawn('npx', ['--yes', 'web-ext@8.9.0', 'run', '--source-dir', staging, '--firefox', firefox, '--no-reload'], {
+  try {
+    execFileSync('timeout', ['12s', 'npx', '--yes', 'web-ext@8.9.0', 'run', '--source-dir', staging, '--firefox', firefox, '--no-reload'], {
       stdio: 'inherit',
     });
-    const timer = setTimeout(() => child.kill('SIGTERM'), 10000);
-    child.on('error', reject);
-    child.on('exit', (code, signal) => {
-      clearTimeout(timer);
-      if (signal === 'SIGTERM') resolve();
-      else if (code === 0) resolve();
-      else reject(new Error(`web-ext runtime smoke test exited with ${code ?? signal}`));
-    });
-  });
+  } catch (error) {
+    // timeout(1) status 124 means Firefox launched and stayed alive for the smoke window.
+    if (error.status !== 124) throw error;
+  }
 } finally {
   rmSync(staging, { recursive: true, force: true });
 }

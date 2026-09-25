@@ -15,7 +15,7 @@ For anything else, open an issue first so we can talk about it before you build 
 3. Open the extension's options and paste your [TypeSafe API key](https://console.typesafe.ai/keys).
 4. Run the tests: `node --test` (Node 20 or newer).
 
-There is no build step and there are no dependencies. Please keep it that way. `node scripts/zip.mjs chrome` and `node scripts/zip.mjs firefox` create browser-specific release archives.
+There is no application build step. The repository has a development dependency on `web-ext` for Firefox validation; run `npm install` first. `node scripts/zip.mjs chrome` and `node scripts/zip.mjs firefox` create browser-specific release archives.
 
 Using a coding agent? Point it at [SKILL.md](SKILL.md). It covers setup and every kind of change below.
 
