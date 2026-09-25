@@ -4,6 +4,10 @@ Every release of Slop Filter. The format follows [Keep a Changelog](https://keep
 
 ## [Unreleased]
 
+### Added
+
+- Firefox support with a Firefox-compatible MV3 manifest and browser-specific packaging.
+
 ## [0.8.0] - 2026-09-24
 
 ### Changed
