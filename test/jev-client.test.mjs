@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { afterEach, test } from 'node:test';
-import { JevError, askJev } from '../src/jev-client.js';
+import { JevError, PROVIDERS, askJev } from '../src/jev-client.js';
 
 const REQUEST = { apiKey: 'k', model: 'm', state: 's', questions: {} };
 const realFetch = globalThis.fetch;
@@ -84,4 +84,39 @@ test('retry-after is honored, up to the cap', async () => {
 
   await askJev(REQUEST, wait);
   assert.deepEqual(waits, [1000, 4000]);
+});
+
+test('the provider picks the endpoint and the model id, and nothing else changes', async () => {
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url, model: JSON.parse(options.body).model, auth: options.headers.Authorization });
+    return reply(200, JSON.stringify({ answers: {}, usage: { input_tokens: 10, cost: 0.00042 } }));
+  };
+  await askJev({ ...REQUEST, apiKey: 'ts-key' });
+  await askJev({ ...REQUEST, apiKey: 'or-key', provider: 'openrouter' });
+  const viaOpenRouter = await askJev({ ...REQUEST, apiKey: 'or-key', provider: 'openrouter' });
+  assert.deepEqual(calls[0], { url: PROVIDERS.typesafe.endpoint, model: 'jev-1.13.0', auth: 'Bearer ts-key' });
+  assert.deepEqual(calls[1], { url: PROVIDERS.openrouter.endpoint, model: 'typesafe/jev-1.13', auth: 'Bearer or-key' });
+  assert.equal(viaOpenRouter.usage.cost, 0.00042, 'OpenRouter reports the charge on the response');
+  assert.equal(calls[0].url, 'https://api.typesafe.ai/v1/systemone');
+  assert.equal(calls[1].url, 'https://openrouter.ai/api/v1/systemone');
+});
+
+test('a prototype key from storage is not a provider', async () => {
+  for (const bad of ['constructor', 'toString', '__proto__', 'hasOwnProperty']) {
+    const urls = [];
+    globalThis.fetch = async (url) => { urls.push(url); return reply(200, '{}'); };
+    await askJev({ ...REQUEST, provider: bad });
+    assert.equal(urls[0], PROVIDERS.typesafe.endpoint, `${bad} fell back to TypeSafe`);
+  }
+});
+
+test('an unknown provider falls back to TypeSafe', async () => {
+  const calls = stubFetch([() => reply(200, '{}')]);
+  const urls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = async (url, options) => { urls.push(url); return real(url, options); };
+  await askJev({ ...REQUEST, provider: 'nope' });
+  assert.equal(urls[0], PROVIDERS.typesafe.endpoint);
+  assert.equal(calls(), 1);
 });

@@ -19,6 +19,7 @@
 import { VOCAB_FEATURES } from './vocab.js';
 
 // Pinned, not an alias: fitted weights and the threshold are tied to one model version.
+// The ids each provider uses for it are in jev-client.js.
 export const JEV_MODEL = 'jev-1.13.0';
 // Jev bills input tokens only. Output tokens are free. Price for the pinned model.
 export const JEV_USD_PER_MILLION_INPUT_TOKENS = 0.042;
@@ -28,6 +29,11 @@ export function requestCostUsd(inputTokens) {
 }
 
 const TYPE = Object.freeze({ NOUL: 'noul', SCORE: 'score' });
+
+// What kind of text a post holds. A site adapter sets `post.kind`. A transcript is
+// speech written down by captions, so the questions about typing and punctuation are
+// left out for it, and the rest apply as they are.
+export const KIND = Object.freeze({ POST: 'post', TRANSCRIPT: 'transcript' });
 
 // Each question is one narrow, literal judgment. Jev reads the words as written, so
 // every instruction names the exact pattern and gives examples of it.
@@ -144,6 +150,7 @@ export const QUESTIONS = Object.freeze({
   },
   verbless_fragments: {
     type: TYPE.NOUL,
+    typedOnly: true,
     instructions:
       "Does `post.text` use noun or adjective fragments in place of full sentences, with no subject and no verb, such as 'Less busywork. More impact.' or 'Porcelain-enameled kettle.'?",
   },
@@ -218,6 +225,7 @@ export const QUESTIONS = Object.freeze({
   },
   stretched_typing: {
     type: TYPE.NOUL,
+    typedOnly: true,
     instructions:
       "Does `post.text` show expression through the typing itself: stretched letters ('soooo', 'nooo', 'yesss'), a stack of punctuation ('!!!', '???', '?!'), shouted caps on a word or two ('this is INSANE'), or a laugh typed out ('lol', 'lmao', 'lmfao', 'haha', 'hahaha')?",
     criteria: {
@@ -227,6 +235,7 @@ export const QUESTIONS = Object.freeze({
   },
   human_slips: {
     type: TYPE.NOUL,
+    typedOnly: true,
     instructions:
       "Does `post.text` contain a slip a person leaves and a model does not: a typo, a missing or doubled word, a mid-sentence self-correction ('wait, no', 'I mean', 'sorry, I meant'), a trailing thought ('idk', 'anyway'), or a sentence that gives up halfway?",
   },
@@ -257,6 +266,7 @@ export const QUESTIONS = Object.freeze({
   // Group 5: unpolish.
   unpolished_prose: {
     type: TYPE.NOUL,
+    typedOnly: true,
     instructions:
       'Is `post.text` unpolished in a way a person leaves and a model does not: uneven rhythm, a run-on, a sentence that trails off or gives up, no closing line, or lowercase with loose or missing punctuation?',
     criteria: {
@@ -268,6 +278,7 @@ export const QUESTIONS = Object.freeze({
   // Circumvention: what a model does when told to avoid the well-known tells.
   colon_semicolon_pivot: {
     type: TYPE.NOUL,
+    typedOnly: true,
     instructions:
       "Does `post.text` use a colon or a semicolon to stage a reveal or to join two clauses, where an em dash would otherwise go, such as \"Here's the thing: it works\", 'The result: fewer bugs', or 'Speed is easy; trust is hard'?",
     criteria: {
@@ -277,6 +288,7 @@ export const QUESTIONS = Object.freeze({
   },
   performed_casualness: {
     type: TYPE.NOUL,
+    typedOnly: true,
     instructions:
       "Does `post.text` bolt casual markers onto prose that is otherwise precise, such as a lone 'lol', 'tbh', or 'ngl' on a polished paragraph, an emoji dropped at the end of a formal sentence, or all-lowercase text whose punctuation, terminology, and phrasing are exact?",
     criteria: {
@@ -428,14 +440,22 @@ export const DEFAULT_WEIGHTS = Object.freeze({
   }),
 });
 
+const isTranscript = (post) => post?.kind === KIND.TRANSCRIPT;
+
+// The questions that apply to this post. Reply-only questions need the replied-to post.
+// Typed-only questions are about keys and punctuation, which captions do not carry.
 export function buildQuestions(post) {
   const questions = {};
-  for (const [id, { needsParent, ...question }] of Object.entries(QUESTIONS)) {
+  for (const [id, { needsParent, typedOnly, ...question }] of Object.entries(QUESTIONS)) {
     if (needsParent && !post.parentText) continue;
+    if (typedOnly && isTranscript(post)) continue;
     questions[id] = question;
   }
   return questions;
 }
+
+const TRANSCRIPT_SOURCE =
+  'Spoken words from the opening of a video, written down by captions. Auto-generated captions carry no punctuation or capitals, so judge the words and their rhythm, not the punctuation.';
 
 const asksAboutParent = (post) =>
   Boolean(post.parentText) && Object.values(QUESTIONS).some((question) => question.needsParent);
@@ -444,6 +464,7 @@ const asksAboutParent = (post) =>
 // so the replied-to post is left out unless a question asks about it.
 export function buildState(post) {
   const state = { post: { text: post.text } };
+  if (isTranscript(post)) state.post.source = TRANSCRIPT_SOURCE;
   if (asksAboutParent(post)) state.parent = { text: post.parentText };
   return state;
 }
@@ -454,6 +475,12 @@ function readAnswer(question, answer) {
   return answer.score / (question.criteria.length - 1);
 }
 
+// Punctuation and typing features. On a transcript they say nothing, so they read as 0.
+const TYPED_FEATURES = new Set([
+  'em_dash', 'spaced_hyphen_dash', 'semicolon', 'colon_clauses', 'curly_quotes',
+  'stretched_letters', 'stacked_punctuation', 'typed_laugh',
+]);
+
 // Every feature lands on 0..1. Questions that were not asked read as 0.
 export function featureVector(answers, post) {
   const features = {};
@@ -461,7 +488,7 @@ export function featureVector(answers, post) {
     features[id] = readAnswer(question, answers[id]);
   }
   for (const [id, detect] of Object.entries(CODE_FEATURES)) {
-    features[id] = detect(post.text);
+    features[id] = isTranscript(post) && TYPED_FEATURES.has(id) ? 0 : detect(post.text);
   }
   features.unprompted_pivot = unpromptedPivot(features, post);
   return features;

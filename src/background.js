@@ -1,9 +1,8 @@
 // Owns the API key and every TypeSafe call. The page never sees the key.
 import './constants.js';
-import { askJev } from './jev-client.js';
+import { askJev, PROVIDERS } from './jev-client.js';
 import {
   DEFAULT_WEIGHTS,
-  JEV_MODEL,
   buildQuestions,
   buildState,
   explain,
@@ -12,10 +11,17 @@ import {
   requestCostUsd,
 } from './model.js';
 
-const { MSG, STORE } = globalThis.XAF;
+const { MSG, STORE, PROVIDER, DEFAULTS } = globalThis.XAF;
 
 const MAX_IN_FLIGHT = 6;
-const ERROR_NO_KEY = 'No API key set. Open the extension options.';
+const ERROR_NO_KEY = Object.freeze({
+  [PROVIDER.TYPESAFE]: 'No TypeSafe API key set. Open the extension options.',
+  [PROVIDER.OPENROUTER]: 'No OpenRouter API key set. Open the extension options.',
+});
+const KEY_FOR = Object.freeze({
+  [PROVIDER.TYPESAFE]: STORE.API_KEY,
+  [PROVIDER.OPENROUTER]: STORE.OPENROUTER_KEY,
+});
 
 // Post id -> promise of { features, asked, usage }. Holding the promise dedupes concurrent asks.
 const featureCache = new Map();
@@ -35,24 +41,28 @@ async function withSlot(task) {
 }
 
 async function fetchFeatures(post) {
-  const { [STORE.API_KEY]: apiKey } = await chrome.storage.local.get(STORE.API_KEY);
-  if (!apiKey) throw new Error(ERROR_NO_KEY);
+  const stored = await chrome.storage.local.get([STORE.PROVIDER, STORE.API_KEY, STORE.OPENROUTER_KEY]);
+  const provider = Object.hasOwn(PROVIDERS, stored[STORE.PROVIDER]) ? stored[STORE.PROVIDER] : DEFAULTS.provider;
+  const apiKey = stored[KEY_FOR[provider]];
+  if (!apiKey) throw new Error(ERROR_NO_KEY[provider]);
 
   const questions = buildQuestions(post);
   // Timed inside the slot, so waiting in the queue does not count. Retries do.
   const { response, latencyMs } = await withSlot(async () => {
     const startedAt = performance.now();
-    const answered = await askJev({ apiKey, model: JEV_MODEL, state: buildState(post), questions });
+    const answered = await askJev({ apiKey, provider, state: buildState(post), questions });
     return { response: answered, latencyMs: performance.now() - startedAt };
   });
 
   const inputTokens = response.usage?.input_tokens ?? 0;
+  // OpenRouter reports the charge on every response. TypeSafe does not, so it is computed.
+  const reportedCost = typeof response.usage?.cost === 'number' && response.usage.cost >= 0 ? response.usage.cost : null;
   return {
     features: featureVector(response.answers, post),
     asked: Object.keys(questions),
     usage: {
       inputTokens,
-      costUsd: requestCostUsd(inputTokens),
+      costUsd: reportedCost ?? requestCostUsd(inputTokens),
       latencyMs,
       questions: Object.keys(questions).length,
     },
@@ -83,6 +93,50 @@ async function classify(post) {
   };
 }
 
+// Blocked accounts, keyed `site:handle`, and how many of each account's posts were flagged.
+// Read once, kept here, written on change. Every tab asks this worker, so they agree.
+const blockedKey = (site, handle) => `${site}:${handle}`;
+let accounts = null;
+
+async function loadAccounts() {
+  if (!accounts) {
+    const stored = await chrome.storage.local.get([STORE.BLOCKED, STORE.FLAG_COUNTS]);
+    accounts = { blocked: stored[STORE.BLOCKED] ?? {}, flagCounts: stored[STORE.FLAG_COUNTS] ?? {} };
+  }
+  return accounts;
+}
+
+const saveAccounts = () =>
+  chrome.storage.local.set({ [STORE.BLOCKED]: accounts.blocked, [STORE.FLAG_COUNTS]: accounts.flagCounts });
+
+async function isBlocked({ site, handle }) {
+  const { blocked } = await loadAccounts();
+  return Boolean(blocked[blockedKey(site, handle)]);
+}
+
+async function block({ site, handle }) {
+  await loadAccounts();
+  accounts.blocked[blockedKey(site, handle)] = { site, handle, blocked_at: Date.now() };
+  delete accounts.flagCounts[blockedKey(site, handle)];
+  await saveAccounts();
+}
+
+async function unblock({ key }) {
+  await loadAccounts();
+  delete accounts.blocked[key];
+  await saveAccounts();
+}
+
+// Counts a flagged post against its account. Returns the count, so the page can offer a
+// block once it reaches the threshold.
+async function countFlag({ site, handle }) {
+  await loadAccounts();
+  const key = blockedKey(site, handle);
+  accounts.flagCounts[key] = (accounts.flagCounts[key] ?? 0) + 1;
+  await saveAccounts();
+  return accounts.flagCounts[key];
+}
+
 // Label writes are read-modify-write on one key, so they run one at a time.
 let labelWrites = Promise.resolve();
 
@@ -95,9 +149,22 @@ function saveLabel({ post, features, label }) {
   return labelWrites;
 }
 
+// Scores a post and counts a flag against its account. The page checks the block list
+// first, before it fetches or sends any text.
+async function classifyAndCount({ post, threshold }) {
+  const result = await classify(post);
+  const isFresh = Boolean(result.usage);
+  if (isFresh && post.handle && result.p >= threshold) result.flagCount = await countFlag(post);
+  return result;
+}
+
 const HANDLERS = {
-  [MSG.CLASSIFY]: ({ post }) => classify(post),
+  [MSG.CLASSIFY]: (message) => classifyAndCount(message),
+  [MSG.IS_BLOCKED]: ({ post }) => isBlocked(post),
   [MSG.LABEL]: (message) => saveLabel(message),
+  [MSG.BLOCK]: ({ post }) => block(post),
+  [MSG.UNBLOCK]: (message) => unblock(message),
+  [MSG.BLOCKED_LIST]: async () => (await loadAccounts()).blocked,
 };
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {

@@ -4,6 +4,13 @@ Every release of Slop Filter. The format follows [Keep a Changelog](https://keep
 
 ## [Unreleased]
 
+### Added
+
+- OpenRouter as a way to reach Jev. Pick it on the options page and paste an OpenRouter key. Same model and same answers, billed to OpenRouter credits. The stats panel shows the cost OpenRouter reports.
+
+- YouTube videos, on the home grid and in search results. A video is judged by its script: an excerpt of its captions from the first minute, scored with the questions about typing and punctuation left out. Videos without English captions are left alone.
+- Blocked accounts. After three flagged posts from one account, the flagged post offers to block it. A blocked account's posts fold on sight and are never scored. Hover any score for a Block button. The options page lists blocked accounts with unblock, export, and import. Works on every site.
+
 ## [0.8.0] - 2026-09-24
 
 ### Changed

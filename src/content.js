@@ -2,7 +2,7 @@
 // background worker to score them, and hides the ones over the threshold. Also
 // collects AI/human labels for fitting weights.
 (() => {
-  const { MSG, STORE, MODE, LABEL, DEFAULTS } = globalThis.XAF;
+  const { MSG, STORE, MODE, LABEL, DEFAULTS, BLOCK_AFTER_FLAGS } = globalThis.XAF;
   // Everything site-specific lives in the adapter loaded before this file (src/sites/).
   const SITE = globalThis.XAF_SITE;
   // The optional live stats panel (src/stats-panel.js).
@@ -14,6 +14,7 @@
     INLINE: 'xaf-inline',
     FLAGGED: 'xaf-flagged',
     ERROR: 'xaf-error',
+    OFFER: 'xaf-offer',
     BUTTON: 'xaf-button',
     // Label controls. Tucked away until the chip is hovered.
     EXTRA: 'xaf-extra',
@@ -39,6 +40,11 @@
     LABEL_AI: 'AI',
     LABEL_HUMAN: 'Human',
     LABEL_PROMPT: 'Label:',
+    BLOCK: 'Block',
+    BLOCKED: 'Blocked',
+    BLOCK_OFFER: (count, handle) => `${count} posts from ${handle} scored as slop. Block?`,
+    BLOCK_YES: 'Block',
+    BLOCK_NO: 'Not now',
     UPSTREAM_ERROR: 'Upstream API error',
     WHY_NOT_ASKED: 'not asked, the post it replies to is unknown:',
     WHY_HARD_RULE: 'gate 2, AI hard rule, decisive alone:',
@@ -150,16 +156,18 @@
       .join('\n');
   }
 
+  // Sites open the post on any click inside it. A chip in a site's header line can also
+  // sit inside a `summary` or a link, where a click would fold the comment or navigate.
+  const stopClick = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
   function buildBar(element, post, result, isFlagged, isHidden) {
     const bar = document.createElement('div');
     bar.className = CLASS.BAR;
     bar.classList.toggle(CLASS.FLAGGED, isFlagged);
-    // Sites open the post on any click inside it. A chip in a site's header line can also
-    // sit inside a `summary` or a link, where a click would fold the comment or navigate.
-    bar.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-    });
+    bar.addEventListener('click', stopClick);
 
     const percent = Math.round(result.p * 100);
     const summary = document.createElement('span');
@@ -191,6 +199,7 @@
         button(TEXT.LABEL_AI, onLabel(LABEL.AI), current === LABEL.AI),
         button(TEXT.LABEL_HUMAN, onLabel(LABEL.HUMAN), current === LABEL.HUMAN),
       ];
+      if (post.handle) extras.push(button(TEXT.BLOCK, () => blockAccount(post)));
       for (const extra of extras) extra.classList.add(CLASS.EXTRA);
       bar.append(...extras);
     }
@@ -209,6 +218,7 @@
     removeBars(element);
     delete element.dataset[DATA.HIDE];
     element.dataset[DATA.BAR] = 'false';
+    element.querySelector(`:scope > .${CLASS.OFFER}`)?.remove();
   }
 
   // Where the adapter wants this item's chip, best spot first. Sites without the hook,
@@ -259,12 +269,15 @@
     const bar = document.createElement('div');
     bar.className = `${CLASS.BAR} ${CLASS.ERROR}`;
     bar.textContent = `${TEXT.UPSTREAM_ERROR} \u00b7 ${error.message}`;
-    if (error.detail) bar.title = error.detail;
+    // The raw response body stays in the console. A page script can read a title
+    // attribute, and a provider's error body is not ours to publish there.
     mount(element, bar, true);
     element.dataset[DATA.BAR] = 'true';
   }
 
   function render(element, post, result) {
+    if (result.blocked) return renderBlocked(element, post);
+    if (result.unscorable) return clear(element);
     clear(element);
     const isFlagged = result.p >= settings.threshold;
     const isHidden = isFlagged && !revealed.has(post.id);
@@ -276,18 +289,87 @@
     if (!wantsBar) return;
     const isCollapsed = element.dataset[DATA.HIDE] === HIDE.COLLAPSE;
     mount(element, buildBar(element, post, result, isFlagged, isHidden), isCollapsed);
+    if (isFlagged && wantsOffer(post, result)) element.append(buildOffer(post, result));
   }
+
+  const isTooShort = (text) => !text || text.split(/\s+/).length < MIN_WORDS;
+  // A post that cannot be judged: no text could be fetched, or too little of it. It is
+  // remembered like any result, so it is not fetched again.
+  const UNSCORABLE = Object.freeze({ unscorable: true });
+
+  const BLOCKED = (handle) => ({ blocked: true, handle });
 
   async function resultFor(element, post) {
     if (!results.has(post.id)) {
+      // A blocked account's post is settled before any text is fetched or sent.
+      if (post.handle && (await send({ type: MSG.IS_BLOCKED, post }))) {
+        results.set(post.id, BLOCKED(post.handle));
+        return results.get(post.id);
+      }
+      // Some sites fetch the text first, such as a video's captions.
+      if (SITE.loadText) post.text = await SITE.loadText(post);
+      if (isTooShort(post.text)) {
+        results.set(post.id, UNSCORABLE);
+        return UNSCORABLE;
+      }
       post.parentText = SITE.parentText(element, post);
-      const result = await send({ type: MSG.CLASSIFY, post });
+      const result = await send({ type: MSG.CLASSIFY, post, threshold: settings.threshold });
+      result.handle = post.handle;
       results.set(post.id, result);
       // Once per post per page, the moment the answer lands.
       STATS.record({ usage: result.usage, isFlagged: result.p >= settings.threshold });
     }
     return results.get(post.id);
   }
+
+  // Hides every post from an account from now on, on every page.
+  async function blockAccount(post) {
+    await send({ type: MSG.BLOCK, post });
+    for (const [id, result] of results) {
+      if (result.handle === post.handle) results.set(id, BLOCKED(post.handle));
+    }
+    rerenderAll();
+  }
+
+  // The row for a post from a blocked account: no score, no Jev call.
+  function renderBlocked(element, post) {
+    clear(element);
+    element.dataset[DATA.HIDE] = HIDE.COLLAPSE;
+    const bar = document.createElement('div');
+    bar.className = `${CLASS.BAR} ${CLASS.FLAGGED}`;
+    bar.addEventListener('click', stopClick);
+    const summary = document.createElement('span');
+    summary.textContent = `${TEXT.BLOCKED} ${post.handle}`;
+    bar.append(summary);
+    element.append(bar);
+    bars.set(element, bar);
+    element.dataset[DATA.BAR] = 'true';
+  }
+
+  // Once an account's flagged posts reach the threshold, the next one carries an offer.
+  const offered = new Set();
+  function buildOffer(post, result) {
+    const offer = document.createElement('div');
+    offer.className = CLASS.OFFER;
+    offer.addEventListener('click', stopClick);
+    const text = document.createElement('span');
+    text.textContent = TEXT.BLOCK_OFFER(result.flagCount, post.handle);
+    offer.append(
+      text,
+      button(TEXT.BLOCK_YES, () => blockAccount(post)),
+      button(TEXT.BLOCK_NO, () => {
+        offered.add(post.handle);
+        offer.remove();
+      }),
+    );
+    return offer;
+  }
+
+  const wantsOffer = (post, result) =>
+    Boolean(post.handle) &&
+    (result.flagCount ?? 0) >= BLOCK_AFTER_FLAGS &&
+    result.flagCount % BLOCK_AFTER_FLAGS === 0 &&
+    !offered.has(post.handle);
 
   // Animated mode inspects a post once. A post already scored and shown under
   // another mode is left as it is.
@@ -411,6 +493,11 @@
         return;
       }
       if (!isCurrent()) return;
+      // Nothing to judge, or an account already blocked: no verdict to play.
+      if (result.unscorable || result.blocked) {
+        render(element, post, result);
+        return;
+      }
 
       const isFlagged = result.p >= settings.threshold;
       fill = await playVerdict(element, isFlagged ? CLASS.FAIL : CLASS.PASS, line);
@@ -477,7 +564,8 @@
       clear(element);
       element.dataset[DATA.ID] = post.id;
     }
-    if (post.text.split(/\s+/).length < MIN_WORDS) return;
+    // When the adapter fetches the text later, its length is checked then.
+    if (!SITE.loadText && isTooShort(post.text)) return;
 
     if (wantsInspection(post)) {
       awaitingStage.set(element, post);
