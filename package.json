@@ -10,5 +10,8 @@
     "test": "node --test",
     "lint:firefox": "node scripts/zip.mjs firefox && rm -rf /tmp/slop-filter-firefox-lint && mkdir /tmp/slop-filter-firefox-lint && unzip -q dist/slop-filter-*-firefox.zip -d /tmp/slop-filter-firefox-lint && npx --yes web-ext@8.9.0 lint --source-dir /tmp/slop-filter-firefox-lint",
     "test:firefox": "node scripts/firefox-smoke.mjs"
+  },
+  "devDependencies": {
+    "web-ext": "^8.9.0"
   }
 }
