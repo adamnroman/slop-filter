@@ -80,6 +80,14 @@ The default weights are guesses. Labels fix that.
 
 ### What the rules judge
 
+Human first. A model can be told to avoid any AI tell named here, so that list is a moving target. It cannot be told to be weird in a way it did not already have, so the human list is stable. The decision runs through three gates, in order:
+
+1. **A decisive human tell.** When Jev's confidence in any of `HUMAN_TELLS` reaches `HUMAN_VETO_BAR` (0.75), the post is human. Nothing can override it. The score shown is at most one minus that confidence.
+2. **A decisive AI tell**, a hard rule. When Jev's confidence in any of `HARD_RULES` reaches `HARD_RULE_BAR` (0.75), the post is flagged and that confidence is the floor of the score.
+3. **The weighted sum.** AI tells add, human tells subtract, through a logistic function. With no tell on either side the sum lands near zero: a post is human by default. The maintainer chose that explicitly.
+
+The human tells come in five groups, all about the shape of the words and not the vocabulary: invented words ("jestermaxx", a deliberately clumsy compound), typing shape (repetition for emphasis, stretched letters, stacked punctuation, caps, typed laughs, slips), humor (a joke, sarcasm, a meme format used as a meme), firsthand specifics (a number, a name, a thing the writer did), and unpolish (uneven rhythm, a sentence that gives up, lowercase with loose punctuation). Firsthand specifics never settle a post on their own: a reply bot mirrors the specifics of the post it answers, so that group only counts through the sum.
+
 Cadence and prose, not meaning. A person can be generic, restate the post they answer, or say nothing new. That is human slop and it must not be flagged as AI. So no rule asks whether a post is generic, engaged, or original.
 
 The rules in `src/model.js` follow the three buckets of the [unpolish-ai-writing](https://github.com/wilu222/unpolish-ai-writing) skill (MIT), plus one group of our own:
@@ -87,15 +95,20 @@ The rules in `src/model.js` follow the three buckets of the [unpolish-ai-writing
 - **Assistant residue**: chatbot leftovers, flattery openers, and the contrast pivot in every order: "It's not X, it's Y", "X, not Y", "Y instead of X", "less X, more Y". Jev reads literally, so each order has to be named. Two real posts were missed when only the first form was.
 - **False profundity**: announcing its own insight ("The catch is...", "This is a useful inversion:"), invented concept labels, stakes inflation, unnamed authorities, three matching beats, verbless fragments, rhythm so uniform it reads rehearsed.
 - **Machine cadence**: synonym cycling, stacked one-line punchlines, dropped subjects, tidy bows, significance paint.
+- **Word formation**: tells in how words are made, not in sentence shape. A compressed coinage packs an idea into a noun stack and uses it as a known term ("keep rate", "review-rejection rate"); a person says the idea. Frame presupposition refers to a set the reader never saw ("the missing one is..."). The spotlight formula singles out one detail with casual praise ("is the part that jumps out"). Compressed coinages and the spotlight formula are hard rules.
 - **Circumvention**: what a model does when told to avoid the known tells. The em dash becomes a colon, a semicolon, or a spaced hyphen, which people rarely use in casual posts. Polished prose gets a lone "lol" or all-lowercase letters bolted on.
 
-**Hard rules.** A weighted sum suits tells that add up. Some tells do not add up: they are decisive alone. `HARD_RULES` in `src/model.js` lists them (`unprompted_pivot`, `assistant_residue`, `announced_insight`). When Jev's confidence in one reaches `HARD_RULE_BAR` (0.75), the post is flagged on that alone, however short it is, and Jev's confidence becomes the score. Below the bar the same tell is an ordinary weight. The hover breakdown names the hard rule that fired.
+**Hard rules.** A weighted sum suits tells that add up. Some tells do not add up: they are decisive alone. `HARD_RULES` in `src/model.js` lists them (`unprompted_pivot`, `assistant_residue`, `announced_insight`, `compressed_coinage`, `spotlight_formula`). When Jev's confidence in one reaches `HARD_RULE_BAR` (0.75), the post is flagged on that alone, however short it is, and Jev's confidence becomes the score. Below the bar the same tell is an ordinary weight. The hover breakdown names the hard rule that fired.
 
 The pivot is only decisive when nobody raised the alternative it rejects. "It's economics, not benchmarks" is a real answer to a post about benchmarks, and a tell everywhere else. So when the replied-to post is known, a second question, `pivot_answers_parent`, asks whether that post actually says or implies the rejected idea, and code discounts the pivot by Jev's confidence that it does (`unprompted_pivot`). The two judgments are separate questions because Jev is weaker when one question needs two steps. This is the only reason the replied-to post is sent to Jev. A reply whose parent is not on the page (X labels these "Replying to") cannot be checked, so the pivot is not decisive there.
 
-`scripts/fit.mjs` fits the weighted sum only. Hard rules sit on top of it.
+**Why human first.** Three real human posts were flagged in one day: "Opus 5.5 is way, way, way better" (a recommendation misread as a pivot), "slop-infrastructuring" (a joke coinage that tripped the coinage rule), and "Born to jestermaxx, forced to jevmaxx" (invented words in a meme format). Each one carried something no model produces, and nothing in the rules could say so. Casual slang alone still does not count as a human tell: a model reaches for "tbh" when told to sound casual, a person stretches, repeats, mistypes, and invents.
+
+`scripts/fit.mjs` fits the weighted sum only. Hard rules and the human veto sit on top of it.
 
 `src/vocab.js` holds the skill's word tables as three tiers with its counting rules: one always-tier word is a nudge and two is the full signal, the cluster tier needs two together, and the density tier only counts when the text is soaked, about 3% of its words. Words that are only a tell in one sense ("quietly", "landscape", "robust", "lands") are not counted by code. They are examples in the `paint_words` question, where Jev can tell the senses apart.
+
+The maintainer would rather hide a person now and then than let slop through. That preference lives in the hard rules and the AI weights, not in the starting point: the bias sits low so that a post with no tells is human.
 
 The old meaning-based rules (generic content, missing voice, restates the post, generic lesson, insight reframe, unearned "real") were removed on 2026-09-21 as an experiment. They are in the git history before that date.
 

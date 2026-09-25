@@ -4,6 +4,21 @@ Every release of Slop Filter. The format follows [Keep a Changelog](https://keep
 
 ## [Unreleased]
 
+### Changed
+
+- Human first. Human tells now settle a post on their own: an invented word, a joke, repetition for emphasis, a stretched word, a typo, or unpolished prose, when Jev is confident of it, makes the post human and no AI rule can override it. Then the AI hard rules, then the weighted sum. With no tell on either side a post is human. Three real human posts flagged as AI in one day prompted this.
+
+### Added
+
+- Word formation tells: a compressed coinage used as a known term ("keep rate", "review-rejection rate"), a reference to a frame the reader never saw ("the missing one is..."), and the spotlight praise formula ("is the part that jumps out"). The first and last are hard rules. An engagement close ("Curious if anyone...") is back as a phrasing tell, and a coined metaphor treated as an established category counts as an invented label.
+
+### Changed
+
+- The starting point leans toward flagging. A short post shows one or two tells at most, and a false positive costs less than a miss.
+- Performed casualness now covers lowercase over precise prose, not only over polished prose.
+- Human cadence tells. Repetition for emphasis, expression through the typing itself (stretched letters, stacked punctuation, caps, typed laughs), and slips now pull a score down, and a confident one stops any hard rule from flagging the post alone. Casual slang by itself does not count.
+- The contrast pivot is narrower: a comparison, a recommendation, a preference, or a correction is not a pivot.
+
 ## [0.7.0] - 2026-09-22
 
 ### Added
