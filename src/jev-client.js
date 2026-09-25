@@ -1,6 +1,14 @@
 // Minimal client for POST /v1/systemone. Works in the extension worker and in Node.
+//
+// Jev is reachable at TypeSafe directly or through OpenRouter, which resells it in the
+// same request format and bills the caller's OpenRouter credits. The endpoint and the
+// model id are the only differences.
 
-const ENDPOINT = 'https://api.typesafe.ai/v1/systemone';
+export const PROVIDERS = Object.freeze({
+  typesafe: Object.freeze({ endpoint: 'https://api.typesafe.ai/v1/systemone', model: 'jev-1.13.0' }),
+  openrouter: Object.freeze({ endpoint: 'https://openrouter.ai/api/v1/systemone', model: 'typesafe/jev-1.13' }),
+});
+const DEFAULT_PROVIDER = 'typesafe';
 const TIMEOUT_MS = 10_000;
 // One call makes the first attempt plus at most this many retries, then gives up.
 const MAX_RETRIES = 3;
@@ -59,13 +67,14 @@ function backoffMs(failure, retry) {
 }
 
 // `wait` is injectable so tests do not sit through real backoff.
-export async function askJev({ apiKey, model, state, questions }, wait = sleep) {
+export async function askJev({ apiKey, provider = DEFAULT_PROVIDER, state, questions }, wait = sleep) {
+  const { endpoint, model } = Object.hasOwn(PROVIDERS, provider) ? PROVIDERS[provider] : PROVIDERS[DEFAULT_PROVIDER];
   const body = JSON.stringify({ model, state, questions });
 
   for (let retry = 0; ; retry++) {
     let failure;
     try {
-      const response = await fetch(ENDPOINT, {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${apiKey}`,

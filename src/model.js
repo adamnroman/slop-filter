@@ -19,6 +19,7 @@
 import { VOCAB_FEATURES } from './vocab.js';
 
 // Pinned, not an alias: fitted weights and the threshold are tied to one model version.
+// The ids each provider uses for it are in jev-client.js.
 export const JEV_MODEL = 'jev-1.13.0';
 // Jev bills input tokens only. Output tokens are free. Price for the pinned model.
 export const JEV_USD_PER_MILLION_INPUT_TOKENS = 0.042;

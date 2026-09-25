@@ -5,7 +5,7 @@ description: Install, update, tune, or change Slop Filter, a Chrome and Firefox 
 
 # Slop Filter
 
-A Manifest V3 Chrome and Firefox extension with no application build step. It reads each post, asks TypeSafe Jev a set of narrow questions about the text, combines the answers into one score with weights, and hides posts over the user's threshold. The repository has the `web-ext` development dependency for Firefox validation. Repo: https://github.com/adamnroman/slop-filter
+A Manifest V3 Chrome and Firefox extension with no application build step. The repository has the `web-ext` development dependency for Firefox validation. It reads each post, asks TypeSafe Jev a set of narrow questions about the text, combines the answers into one score with weights, and hides posts over the user's threshold. Repo: https://github.com/adamnroman/slop-filter
 
 Pick the section that matches what the user asked for. For anything deeper, read `docs/development.md` in the repo.
 
@@ -18,7 +18,7 @@ Chrome does not let a script install an extension. You do the file work, then wa
 3. Walk the user through the browser:
    - Chrome: open `chrome://extensions`, turn on Developer mode, and click Load unpacked.
    - Firefox: run `node scripts/zip.mjs firefox`, extract the archive, open `about:debugging#/runtime/this-firefox`, click Load Temporary Add-on, and select the extracted root `manifest.json`.
-   - In either browser, open the extension's options and paste the TypeSafe API key. It saves on its own. No key yet: send them to https://console.typesafe.ai/keys.
+   - In either browser, open the extension's options and paste the TypeSafe API key. It saves on its own. No key yet: send them to https://console.typesafe.ai/keys. If they would rather use OpenRouter credits, pick OpenRouter under "Where to reach Jev" and paste an OpenRouter key from https://openrouter.ai/settings/keys instead. Same model, same answers.
    - Open x.com, linkedin.com, reddit.com, or a YouTube video's comments and scroll. Every post of 5 or more words gets a small `AI 12%` chip in one corner. Hover the chip for the AI and Human label buttons. Posts over the threshold collapse to `Likely AI · 88% [Show]`.
 4. Rules while installing:
    - Never ask the user to paste their API key into the chat. It goes only into the options page.

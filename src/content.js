@@ -269,7 +269,8 @@
     const bar = document.createElement('div');
     bar.className = `${CLASS.BAR} ${CLASS.ERROR}`;
     bar.textContent = `${TEXT.UPSTREAM_ERROR} \u00b7 ${error.message}`;
-    if (error.detail) bar.title = error.detail;
+    // The raw response body stays in the console. A page script can read a title
+    // attribute, and a provider's error body is not ours to publish there.
     mount(element, bar, true);
     element.dataset[DATA.BAR] = 'true';
   }

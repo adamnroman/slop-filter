@@ -13,7 +13,8 @@
     "storage"
   ],
   "host_permissions": [
-    "https://api.typesafe.ai/*"
+    "https://api.typesafe.ai/*",
+    "https://openrouter.ai/api/*"
   ],
   "background": {
     "service_worker": "src/background.js",

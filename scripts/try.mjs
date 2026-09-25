@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // Runs one post through the question set and prints every answer.
 //   TYPESAFE_API_KEY=... node scripts/try.mjs "post text" ["text of the post it replies to"]
+//   OPENROUTER_API_KEY=... JEV_PROVIDER=openrouter node scripts/try.mjs "post text"
 // Use it to check a new or reworded question before it goes into the extension.
 import { askJev } from '../src/jev-client.js';
 import {
-  JEV_MODEL,
   buildQuestions,
   buildState,
   featureVector,
@@ -13,7 +13,8 @@ import {
   weightedProbability,
 } from '../src/model.js';
 
-const API_KEY_ENV = 'TYPESAFE_API_KEY';
+const PROVIDER = process.env.JEV_PROVIDER ?? 'typesafe';
+const API_KEY_ENV = PROVIDER === 'openrouter' ? 'OPENROUTER_API_KEY' : 'TYPESAFE_API_KEY';
 
 const [text, parentText] = process.argv.slice(2);
 const apiKey = process.env[API_KEY_ENV];
@@ -25,7 +26,7 @@ if (!text || !apiKey) {
 const post = { text, parentText: parentText ?? null };
 const response = await askJev({
   apiKey,
-  model: JEV_MODEL,
+  provider: PROVIDER,
   state: buildState(post),
   questions: buildQuestions(post),
 });
