@@ -5,7 +5,7 @@ description: Install, update, tune, or change Slop Filter, a Chrome and Firefox 
 
 # Slop Filter
 
-A Manifest V3 Chrome and Firefox extension with no application build step. The repository has the `web-ext` development dependency for Firefox validation. It reads each post, asks TypeSafe Jev a set of narrow questions about the text, combines the answers into one score with weights, and hides posts over the user's threshold. Repo: https://github.com/adamnroman/slop-filter
+A Manifest V3 Chrome and Firefox extension with no application build step and no dependencies. It reads each post, asks TypeSafe Jev a set of narrow questions about the text, combines the answers into one score with weights, and hides posts over the user's threshold. Repo: https://github.com/adamnroman/slop-filter
 
 Pick the section that matches what the user asked for. For anything deeper, read `docs/development.md` in the repo.
 
@@ -45,7 +45,7 @@ Read these before editing:
 
 Rules that keep it working:
 
-- No application build step or framework. Install the `web-ext` development dependency with `npm install` for Firefox package and runtime validation. Plain scripts are loaded directly by both browsers.
+- No application build step, no framework, and no dependencies. `node scripts/zip.mjs firefox` builds the Firefox package from the same `manifest.json` as Chrome. Plain scripts are loaded directly by both browsers.
 - After any change: run `node --test`, then have the user click "Reload extension" and reload their tabs. You cannot reload it for them. On the user's own copy, also bump a fourth number in `manifest.json` `version` (`0.6.2` to `0.6.2.1`) so the options page can warn about stale code. In a pull request, leave the version alone and add a line under `## [Unreleased]` in `CHANGELOG.md`.
 - State on a site's own post element goes in `data-xaf-*` attributes, never classes. X rewrites a post's whole class list on every hover and wipes added classes. Classes are fine on elements the extension creates.
 - Shared CSS must not assume a tag name. Site layout fixes go in `src/sites/<site>.css`.

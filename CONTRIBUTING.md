@@ -15,7 +15,9 @@ For anything else, open an issue first so we can talk about it before you build 
 3. Open the extension's options and paste your [TypeSafe API key](https://console.typesafe.ai/keys).
 4. Run the tests: `node --test` (Node 20 or newer).
 
-There is no application build step. The repository has a development dependency on `web-ext` for Firefox validation; run `npm install` first. `node scripts/zip.mjs chrome` and `node scripts/zip.mjs firefox` create browser-specific release archives.
+There is no application build step and no dependencies. `node scripts/zip.mjs chrome` builds the Chrome package and `node scripts/zip.mjs firefox` builds the Firefox package. Both read the one `manifest.json`; the Firefox archive uses the same manifest with the Firefox background shape and add-on identity applied.
+
+Firefox validation is an optional manual step, not a dependency. With `npx` available, `npx web-ext@8.9.0 lint --source-dir <extracted package>` checks a built archive. Nothing in the repo installs or runs it for you.
 
 Using a coding agent? Point it at [SKILL.md](SKILL.md). It covers setup and every kind of change below.
 

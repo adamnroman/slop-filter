@@ -2,15 +2,16 @@
 // Builds a browser package with the selected manifest at its root.
 //   node scripts/zip.mjs chrome   -> dist/slop-filter-<version>-chrome.zip
 //   node scripts/zip.mjs firefox  -> dist/slop-filter-<version>-firefox.zip
-import { cpSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { manifestVersion } from './changelog.mjs';
+import { readManifest, resolveManifest } from './manifests.mjs';
 
 const target = process.argv[2] ?? 'chrome';
-const manifests = { chrome: 'manifest.json', firefox: 'manifest.firefox.json' };
-if (!manifests[target]) throw new Error(`Unknown browser: ${target}`);
+// One source of truth: the Firefox manifest is derived from manifest.json at build time.
+const manifest = resolveManifest(target, readManifest());
 const packageFiles = ['options.html', 'src', 'assets', 'LICENSE'];
 const exclude = ['*.DS_Store', 'assets/icons/icon-source.png'];
 const outDir = 'dist';
@@ -20,7 +21,7 @@ const staging = mkdtempSync(join(tmpdir(), 'slop-filter-'));
 mkdirSync(outDir, { recursive: true });
 rmSync(out, { force: true });
 try {
-  cpSync(manifests[target], join(staging, 'manifest.json'));
+  writeFileSync(join(staging, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
   for (const file of packageFiles) cpSync(file, join(staging, file), { recursive: true });
   try {
     execFileSync('zip', ['-r', '-q', '-X', join(process.cwd(), out), '.', '-x', ...exclude], {
