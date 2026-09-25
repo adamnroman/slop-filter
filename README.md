@@ -22,7 +22,7 @@ Today it is a Chrome extension that hides AI-generated posts and comments on X, 
 4. The extension combines the answers into one score with weights. A small script fits those weights from the posts you labeled.
 5. Posts under 5 words are left alone. There is too little to judge.
 
-You bring your own TypeSafe API key. It stays in your browser. Post text is sent to TypeSafe for scoring and nowhere else. See the [privacy policy](PRIVACY.md). 1,000 posts cost about 4 cents.
+You bring your own API key: from TypeSafe, or from OpenRouter, which resells the same Jev model and bills your OpenRouter credits. It stays in your browser. Post text is sent to the provider you chose for scoring and nowhere else. See the [privacy policy](PRIVACY.md). 1,000 posts cost about 4 cents.
 
 ## Install
 
@@ -34,7 +34,7 @@ Read https://raw.githubusercontent.com/adamnroman/slop-filter/main/SKILL.md and 
 
 Your agent clones the repo and walks you through the few clicks Chrome requires. Your API key goes into the extension's options page, never into the chat.
 
-Or do it by hand: clone this repo, open `chrome://extensions`, turn on Developer mode, click Load unpacked, pick the folder. Then open the extension's options and paste your [TypeSafe API key](https://console.typesafe.ai/keys).
+Or do it by hand: clone this repo, open `chrome://extensions`, turn on Developer mode, click Load unpacked, pick the folder. Then open the extension's options and paste your [TypeSafe API key](https://console.typesafe.ai/keys), or pick OpenRouter and paste an [OpenRouter key](https://openrouter.ai/settings/keys).
 
 ## Tune it and contribute
 

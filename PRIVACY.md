@@ -1,6 +1,6 @@
 # Privacy policy
 
-Last updated: 2026-09-20
+Last updated: 2026-09-25
 
 Slop Filter is a browser extension that hides AI-generated posts. It has no server of its own, no account, no analytics, and no ads. This page says what it reads, what leaves your browser, and what stays in it.
 
@@ -10,7 +10,12 @@ On the sites it supports (x.com, linkedin.com, reddit.com, and youtube.com), it 
 
 ## What leaves your browser
 
-To score a post, the extension sends that post's text, and the text of the post it replies to when there is one, to the TypeSafe API at `api.typesafe.ai`, using the TypeSafe API key you entered. That is the only place data is sent.
+To score a post, the extension sends that post's text, and the text of the post it replies to when there is one, to the Jev model. It reaches Jev at one of two places, and you choose which on the options page:
+
+- The TypeSafe API at `api.typesafe.ai`, using the TypeSafe API key you entered. This is the default.
+- OpenRouter at `openrouter.ai`, using the OpenRouter API key you entered. OpenRouter forwards the text to TypeSafe and bills your OpenRouter credits. See the [OpenRouter privacy policy](https://openrouter.ai/privacy).
+
+That is the only place data is sent.
 
 - Author handles are not sent.
 - Nothing is sent to the developers of Slop Filter. We never see your feed, your key, or your labels.

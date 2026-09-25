@@ -30,12 +30,31 @@
         <h2 id="settingsTitle">Settings</h2>
 
         <div class="field">
+          <label for="provider">Where to reach Jev</label>
+          <div class="select">
+            <select id="provider">
+              <option value="typesafe">TypeSafe directly</option>
+              <option value="openrouter">OpenRouter, billed to your OpenRouter credits</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
           <div class="field-head">
             <label for="apiKey">TypeSafe API key</label>
             <a class="hint" href="https://console.typesafe.ai/keys" target="_blank" rel="noopener noreferrer">Get a key</a>
           </div>
           <input id="apiKey" type="password" autocomplete="off" spellcheck="false" aria-describedby="apiKeyHint" />
           <p id="apiKeyHint" class="hint">Stays in your browser. Post text goes to TypeSafe for scoring and nowhere else.</p>
+        </div>
+
+        <div class="field" id="openrouterField">
+          <div class="field-head">
+            <label for="openrouterKey">OpenRouter API key</label>
+            <a class="hint" href="https://openrouter.ai/settings/keys" target="_blank" rel="noopener noreferrer">Get a key</a>
+          </div>
+          <input id="openrouterKey" type="password" autocomplete="off" spellcheck="false" aria-describedby="openrouterHint" />
+          <p id="openrouterHint" class="hint">Same Jev model, same answers. Post text goes to OpenRouter, which forwards it to TypeSafe and bills your credits.</p>
         </div>
 
         <div class="field">

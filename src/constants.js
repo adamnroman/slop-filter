@@ -11,6 +11,8 @@ globalThis.XAF = Object.freeze({
   }),
   STORE: Object.freeze({
     API_KEY: 'apiKey',
+    PROVIDER: 'provider',
+    OPENROUTER_KEY: 'openrouterKey',
     THRESHOLD: 'threshold',
     MODE: 'mode',
     LABELING: 'labeling',
@@ -26,6 +28,8 @@ globalThis.XAF = Object.freeze({
     DIM: 'dim',
     BADGE: 'badge',
   }),
+  // Where Jev is reached. Both take the same request and return the same answers.
+  PROVIDER: Object.freeze({ TYPESAFE: 'typesafe', OPENROUTER: 'openrouter' }),
   LABEL: Object.freeze({ AI: 1, HUMAN: 0 }),
   // Flagged posts from one account before the extension offers to block it.
   BLOCK_AFTER_FLAGS: 3,
@@ -33,6 +37,7 @@ globalThis.XAF = Object.freeze({
     threshold: 0.75,
     mode: 'collapse',
     labeling: true,
+    provider: 'typesafe',
     stats: false,
   }),
 });

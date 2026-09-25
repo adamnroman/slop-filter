@@ -1,9 +1,8 @@
 // Owns the API key and every TypeSafe call. The page never sees the key.
 import './constants.js';
-import { askJev } from './jev-client.js';
+import { askJev, PROVIDERS } from './jev-client.js';
 import {
   DEFAULT_WEIGHTS,
-  JEV_MODEL,
   buildQuestions,
   buildState,
   explain,
@@ -12,10 +11,17 @@ import {
   requestCostUsd,
 } from './model.js';
 
-const { MSG, STORE } = globalThis.XAF;
+const { MSG, STORE, PROVIDER, DEFAULTS } = globalThis.XAF;
 
 const MAX_IN_FLIGHT = 6;
-const ERROR_NO_KEY = 'No API key set. Open the extension options.';
+const ERROR_NO_KEY = Object.freeze({
+  [PROVIDER.TYPESAFE]: 'No TypeSafe API key set. Open the extension options.',
+  [PROVIDER.OPENROUTER]: 'No OpenRouter API key set. Open the extension options.',
+});
+const KEY_FOR = Object.freeze({
+  [PROVIDER.TYPESAFE]: STORE.API_KEY,
+  [PROVIDER.OPENROUTER]: STORE.OPENROUTER_KEY,
+});
 
 // Post id -> promise of { features, asked, usage }. Holding the promise dedupes concurrent asks.
 const featureCache = new Map();
@@ -35,24 +41,28 @@ async function withSlot(task) {
 }
 
 async function fetchFeatures(post) {
-  const { [STORE.API_KEY]: apiKey } = await chrome.storage.local.get(STORE.API_KEY);
-  if (!apiKey) throw new Error(ERROR_NO_KEY);
+  const stored = await chrome.storage.local.get([STORE.PROVIDER, STORE.API_KEY, STORE.OPENROUTER_KEY]);
+  const provider = stored[STORE.PROVIDER] in PROVIDERS ? stored[STORE.PROVIDER] : DEFAULTS.provider;
+  const apiKey = stored[KEY_FOR[provider]];
+  if (!apiKey) throw new Error(ERROR_NO_KEY[provider]);
 
   const questions = buildQuestions(post);
   // Timed inside the slot, so waiting in the queue does not count. Retries do.
   const { response, latencyMs } = await withSlot(async () => {
     const startedAt = performance.now();
-    const answered = await askJev({ apiKey, model: JEV_MODEL, state: buildState(post), questions });
+    const answered = await askJev({ apiKey, provider, state: buildState(post), questions });
     return { response: answered, latencyMs: performance.now() - startedAt };
   });
 
   const inputTokens = response.usage?.input_tokens ?? 0;
+  // OpenRouter reports the charge on every response. TypeSafe does not, so it is computed.
+  const reportedCost = Number(response.usage?.cost);
   return {
     features: featureVector(response.answers, post),
     asked: Object.keys(questions),
     usage: {
       inputTokens,
-      costUsd: requestCostUsd(inputTokens),
+      costUsd: Number.isFinite(reportedCost) ? reportedCost : requestCostUsd(inputTokens),
       latencyMs,
       questions: Object.keys(questions).length,
     },

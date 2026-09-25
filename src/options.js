@@ -1,5 +1,5 @@
 (() => {
-  const { STORE, LABEL, DEFAULTS } = globalThis.XAF;
+  const { STORE, LABEL, DEFAULTS, PROVIDER } = globalThis.XAF;
 
   const EXPORT_FILENAME = 'labels.json';
   const BLOCKED_FILENAME = 'blocked.json';
@@ -26,7 +26,9 @@
   // Every simple setting: which element, which storage key, how to read it, and the
   // event that means "the user is done changing it".
   const FIELDS = Object.freeze([
+    { id: 'provider', key: STORE.PROVIDER, event: 'change', read: (el) => el.value },
     { id: 'apiKey', key: STORE.API_KEY, event: 'input', pauseMs: TYPING_PAUSE_MS, read: (el) => el.value.trim() },
+    { id: 'openrouterKey', key: STORE.OPENROUTER_KEY, event: 'input', pauseMs: TYPING_PAUSE_MS, read: (el) => el.value.trim() },
     { id: 'threshold', key: STORE.THRESHOLD, event: 'change', read: (el) => Number(el.value) / 100 },
     { id: 'mode', key: STORE.MODE, event: 'change', read: (el) => el.value },
     { id: 'labeling', key: STORE.LABELING, event: 'change', read: (el) => el.checked },
@@ -57,7 +59,10 @@
 
   async function load() {
     const stored = await chrome.storage.local.get(Object.values(STORE));
+    $('provider').value = stored[STORE.PROVIDER] ?? DEFAULTS.provider;
     $('apiKey').value = stored[STORE.API_KEY] ?? '';
+    $('openrouterKey').value = stored[STORE.OPENROUTER_KEY] ?? '';
+    showKeyFields();
     $('threshold').value = Math.round((stored[STORE.THRESHOLD] ?? DEFAULTS.threshold) * 100);
     $('thresholdValue').textContent = $('threshold').value;
     $('mode').value = stored[STORE.MODE] ?? DEFAULTS.mode;
@@ -66,6 +71,13 @@
     $('weights').value = stored[STORE.WEIGHTS] ? JSON.stringify(stored[STORE.WEIGHTS], null, 2) : '';
     showLabelCounts(stored[STORE.LABELS] ?? {});
     showBlocked(stored[STORE.BLOCKED] ?? {});
+  }
+
+  // Only the chosen provider's key field is shown.
+  function showKeyFields() {
+    const isOpenRouter = $('provider').value === PROVIDER.OPENROUTER;
+    $('openrouterField').hidden = !isOpenRouter;
+    $('apiKey').closest('.field').hidden = isOpenRouter;
   }
 
   function showLabelCounts(labels) {
@@ -194,6 +206,7 @@
     $('thresholdValue').textContent = $('threshold').value;
   });
   FIELDS.forEach(saveOnChange);
+  $('provider').addEventListener('change', showKeyFields);
   $('weights').addEventListener('change', saveWeights);
   $('exportLabels').addEventListener('click', exportLabels);
   $('exportBlocked').addEventListener('click', exportBlocked);

@@ -20,7 +20,7 @@ Chrome does not let a script install an extension. You do the file work, then wa
    2. Turn on "Developer mode" (top right).
    3. Click "Load unpacked" and pick the folder. Print the full path so they can paste it.
    4. On the Slop Filter card, click Details, then "Extension options".
-   5. Paste their TypeSafe API key. It saves on its own. No key yet: send them to https://console.typesafe.ai/keys.
+   5. Paste their TypeSafe API key. It saves on its own. No key yet: send them to https://console.typesafe.ai/keys. If they would rather use OpenRouter credits, pick OpenRouter under "Where to reach Jev" and paste an OpenRouter key from https://openrouter.ai/settings/keys instead. Same model, same answers.
    6. Open x.com, linkedin.com, reddit.com, or a YouTube video's comments and scroll. Every post of 5 or more words gets a small `AI 12%` chip in one corner. Hover the chip for the AI and Human label buttons. Posts over the threshold collapse to `Likely AI · 88% [Show]`.
 4. Rules while installing:
    - Never ask the user to paste their API key into the chat. It goes only into the options page.

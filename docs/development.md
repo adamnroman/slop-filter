@@ -154,7 +154,7 @@ node scripts/release.mjs                 # check everything and tag a release (n
 
 ## Notes
 
-- The model is pinned to `jev-1.13.0` in `src/model.js`. Refit after changing it.
+- The model is pinned to `jev-1.13.0` in `src/model.js`. Refit after changing it. Jev can be reached at TypeSafe or through OpenRouter (`PROVIDERS` in `src/jev-client.js`): same request, same answers, different endpoint and model id. OpenRouter reports the charge in `usage.cost` and the worker uses that when present.
 - Each user brings their own TypeSafe API key. It lives in `chrome.storage.local` in their browser and is only ever sent to `api.typesafe.ai`. No key ships with the extension.
 - Chrome Web Store upload: `node scripts/zip.mjs` builds `dist/slop-filter-<version>.zip` with only the files Chrome needs. The store wants a higher `version` on every upload.
 - After any code change, reload the extension (options page: Reload extension, or the reload icon on `chrome://extensions`), then reload x.com. Reloading x.com alone keeps the old code. Bump the fourth number of `version` in `manifest.json` with each change (see Versions and releases) so the options page can warn when Chrome is behind.
