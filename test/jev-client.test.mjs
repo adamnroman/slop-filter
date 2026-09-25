@@ -102,6 +102,15 @@ test('the provider picks the endpoint and the model id, and nothing else changes
   assert.equal(calls[1].url, 'https://openrouter.ai/api/v1/systemone');
 });
 
+test('a prototype key from storage is not a provider', async () => {
+  for (const bad of ['constructor', 'toString', '__proto__', 'hasOwnProperty']) {
+    const urls = [];
+    globalThis.fetch = async (url) => { urls.push(url); return reply(200, '{}'); };
+    await askJev({ ...REQUEST, provider: bad });
+    assert.equal(urls[0], PROVIDERS.typesafe.endpoint, `${bad} fell back to TypeSafe`);
+  }
+});
+
 test('an unknown provider falls back to TypeSafe', async () => {
   const calls = stubFetch([() => reply(200, '{}')]);
   const urls = [];

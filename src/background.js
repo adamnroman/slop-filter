@@ -42,7 +42,7 @@ async function withSlot(task) {
 
 async function fetchFeatures(post) {
   const stored = await chrome.storage.local.get([STORE.PROVIDER, STORE.API_KEY, STORE.OPENROUTER_KEY]);
-  const provider = stored[STORE.PROVIDER] in PROVIDERS ? stored[STORE.PROVIDER] : DEFAULTS.provider;
+  const provider = Object.hasOwn(PROVIDERS, stored[STORE.PROVIDER]) ? stored[STORE.PROVIDER] : DEFAULTS.provider;
   const apiKey = stored[KEY_FOR[provider]];
   if (!apiKey) throw new Error(ERROR_NO_KEY[provider]);
 
@@ -56,13 +56,13 @@ async function fetchFeatures(post) {
 
   const inputTokens = response.usage?.input_tokens ?? 0;
   // OpenRouter reports the charge on every response. TypeSafe does not, so it is computed.
-  const reportedCost = Number(response.usage?.cost);
+  const reportedCost = typeof response.usage?.cost === 'number' && response.usage.cost >= 0 ? response.usage.cost : null;
   return {
     features: featureVector(response.answers, post),
     asked: Object.keys(questions),
     usage: {
       inputTokens,
-      costUsd: Number.isFinite(reportedCost) ? reportedCost : requestCostUsd(inputTokens),
+      costUsd: reportedCost ?? requestCostUsd(inputTokens),
       latencyMs,
       questions: Object.keys(questions).length,
     },

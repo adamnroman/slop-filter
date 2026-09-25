@@ -68,7 +68,7 @@ function backoffMs(failure, retry) {
 
 // `wait` is injectable so tests do not sit through real backoff.
 export async function askJev({ apiKey, provider = DEFAULT_PROVIDER, state, questions }, wait = sleep) {
-  const { endpoint, model } = PROVIDERS[provider] ?? PROVIDERS[DEFAULT_PROVIDER];
+  const { endpoint, model } = Object.hasOwn(PROVIDERS, provider) ? PROVIDERS[provider] : PROVIDERS[DEFAULT_PROVIDER];
   const body = JSON.stringify({ model, state, questions });
 
   for (let retry = 0; ; retry++) {
