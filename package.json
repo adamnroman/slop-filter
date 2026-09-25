@@ -7,6 +7,7 @@
   "scripts": {
     "try": "node scripts/try.mjs",
     "fit": "node scripts/fit.mjs",
-    "test": "node --test"
+    "test": "node --test",
+    "lint:firefox": "node scripts/zip.mjs firefox && rm -rf /tmp/slop-filter-firefox-lint && mkdir /tmp/slop-filter-firefox-lint && unzip -q dist/slop-filter-*-firefox.zip -d /tmp/slop-filter-firefox-lint && npx --yes web-ext lint --source-dir /tmp/slop-filter-firefox-lint"
   }
 }

@@ -1,17 +1,48 @@
 #!/usr/bin/env node
-// Builds the zip for the Chrome Web Store: only the files Chrome needs, manifest at the root.
-//   node scripts/zip.mjs   ->  dist/slop-filter-<version>.zip
+// Builds a browser package with the selected manifest at its root.
+//   node scripts/zip.mjs chrome   -> dist/slop-filter-<version>-chrome.zip
+//   node scripts/zip.mjs firefox  -> dist/slop-filter-<version>-firefox.zip
+import { cpSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, rmSync } from 'node:fs';
 import { manifestVersion } from './changelog.mjs';
 
-const PACKAGE_FILES = ['manifest.json', 'options.html', 'src', 'assets', 'LICENSE'];
-// The 512 px source is only for regenerating the sizes.
-const EXCLUDE = ['*.DS_Store', 'assets/icons/icon-source.png'];
-const OUT_DIR = 'dist';
+const target = process.argv[2] ?? 'chrome';
+const manifests = { chrome: 'manifest.json', firefox: 'manifest.firefox.json' };
+if (!manifests[target]) throw new Error(`Unknown browser: ${target}`);
+const packageFiles = ['options.html', 'src', 'assets', 'LICENSE'];
+const exclude = ['*.DS_Store', 'assets/icons/icon-source.png'];
+const outDir = 'dist';
+const out = `${outDir}/slop-filter-${manifestVersion()}-${target}.zip`;
+const staging = mkdtempSync(join(tmpdir(), 'slop-filter-'));
 
-const out = `${OUT_DIR}/slop-filter-${manifestVersion()}.zip`;
-mkdirSync(OUT_DIR, { recursive: true });
+mkdirSync(outDir, { recursive: true });
 rmSync(out, { force: true });
-execFileSync('zip', ['-r', '-q', '-X', out, ...PACKAGE_FILES, '-x', ...EXCLUDE], { stdio: 'inherit' });
+try {
+  cpSync(manifests[target], join(staging, 'manifest.json'));
+  for (const file of packageFiles) cpSync(file, join(staging, file), { recursive: true });
+  try {
+    execFileSync('zip', ['-r', '-q', '-X', join(process.cwd(), out), '.', '-x', ...exclude], {
+      cwd: staging,
+      stdio: 'inherit',
+    });
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+    execFileSync('python3', ['-c', `
+import os, sys, zipfile
+root, output = sys.argv[1:]
+excluded = ('icon-source.png', '.DS_Store')
+with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
+    for directory, _, files in os.walk(root):
+        for filename in files:
+            path = os.path.join(directory, filename)
+            if any(part in excluded for part in path.split(os.sep)):
+                continue
+            archive.write(path, os.path.relpath(path, root))
+`, staging, join(process.cwd(), out)], { stdio: 'inherit' });
+  }
+} finally {
+  rmSync(staging, { recursive: true, force: true });
+}
 console.log(out);

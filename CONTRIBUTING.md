@@ -11,11 +11,11 @@ For anything else, open an issue first so we can talk about it before you build 
 ## Set up
 
 1. Fork and clone the repo.
-2. Open `chrome://extensions`, turn on Developer mode, click Load unpacked, pick the folder.
+2. For Chrome, open `chrome://extensions`, turn on Developer mode, and click Load unpacked. For Firefox, open `about:debugging#/runtime/this-firefox`, click Load Temporary Add-on, and select `manifest.firefox.json`. Verify the options page opens and the extension injects on a supported site in each browser.
 3. Open the extension's options and paste your [TypeSafe API key](https://console.typesafe.ai/keys).
 4. Run the tests: `node --test` (Node 20 or newer).
 
-There is no build step and there are no dependencies. Please keep it that way.
+There is no build step and there are no dependencies. Please keep it that way. `node scripts/zip.mjs chrome` and `node scripts/zip.mjs firefox` create browser-specific release archives.
 
 Using a coding agent? Point it at [SKILL.md](SKILL.md). It covers setup and every kind of change below.
 

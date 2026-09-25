@@ -62,9 +62,19 @@ To add a site: write the adapter, add a `src/sites/<site>.css` for layout fixes 
 
 ## Install
 
-1. Open `chrome://extensions`, turn on Developer mode, click Load unpacked, pick this folder.
+### Chrome
+
+1. Open `chrome://extensions`, turn on Developer mode, click Load unpacked, and pick this folder.
 2. Open the extension's options. Paste your TypeSafe API key. Settings save on their own.
 3. Open x.com.
+
+### Firefox
+
+1. Open `about:debugging#/runtime/this-firefox`.
+2. Click **Load Temporary Add-on** and select `manifest.firefox.json` in the repository.
+3. Open the extension's options. Paste your TypeSafe API key, then open x.com.
+
+Firefox's MV3 manifest uses `background.scripts` with module support. The source stays shared; `scripts/zip.mjs firefox` stages `manifest.firefox.json` as `manifest.json` for packaging.
 
 ## Make it accurate
 
@@ -153,7 +163,7 @@ node scripts/release.mjs                 # check everything and tag a release (n
 
 - The model is pinned to `jev-1.13.0` in `src/model.js`. Refit after changing it.
 - Each user brings their own TypeSafe API key. It lives in `chrome.storage.local` in their browser and is only ever sent to `api.typesafe.ai`. No key ships with the extension.
-- Chrome Web Store upload: `node scripts/zip.mjs` builds `dist/slop-filter-<version>.zip` with only the files Chrome needs. The store wants a higher `version` on every upload.
+- Browser packages: `node scripts/zip.mjs chrome` builds `dist/slop-filter-<version>-chrome.zip`; `node scripts/zip.mjs firefox` builds `dist/slop-filter-<version>-firefox.zip`. Each archive contains `manifest.json` at its root. Upload the Chrome archive to the Chrome Web Store and the Firefox archive to AMO. Validate the Firefox package with `npx --yes web-ext lint --source-dir <extracted-firefox-package>`.
 - After any code change, reload the extension (options page: Reload extension, or the reload icon on `chrome://extensions`), then reload x.com. Reloading x.com alone keeps the old code. Bump the fourth number of `version` in `manifest.json` with each change (see Versions and releases) so the options page can warn when Chrome is behind.
 - X rewrites a tweet element's whole class list on every hover, which wipes any class an extension adds. State on the tweet element goes in data attributes (`DATA` in `src/content.js`). Classes are only for elements the extension creates.
 - Outside Animated mode, tweets are scored 1500px before they scroll into view, so flagged ones are already hidden when they arrive. Animated mode scores a tweet only when it enters the top three quarters of the viewport.
