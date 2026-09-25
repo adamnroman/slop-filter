@@ -17,7 +17,7 @@ Chrome does not let a script install an extension. You do the file work, then wa
 2. If Node 20 or newer is installed, run `node --test` in the folder. Tell the user if anything fails. If Node is missing, skip this.
 3. Walk the user through the browser:
    - Chrome: open `chrome://extensions`, turn on Developer mode, and click Load unpacked.
-   - Firefox: open `about:debugging#/runtime/this-firefox`, click Load Temporary Add-on, and select `manifest.firefox.json`.
+   - Firefox: run `node scripts/zip.mjs firefox`, extract the archive, open `about:debugging#/runtime/this-firefox`, click Load Temporary Add-on, and select the extracted root `manifest.json`.
    - In either browser, open the extension's options and paste the TypeSafe API key. It saves on its own. No key yet: send them to https://console.typesafe.ai/keys.
    - Open x.com, linkedin.com, reddit.com, or a YouTube video's comments and scroll. Every post of 5 or more words gets a small `AI 12%` chip in one corner. Hover the chip for the AI and Human label buttons. Posts over the threshold collapse to `Likely AI · 88% [Show]`.
 4. Rules while installing:

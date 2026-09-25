@@ -70,9 +70,10 @@ To add a site: write the adapter, add a `src/sites/<site>.css` for layout fixes 
 
 ### Firefox
 
-1. Open `about:debugging#/runtime/this-firefox`.
-2. Click **Load Temporary Add-on** and select `manifest.firefox.json` in the repository.
-3. Open the extension's options. Paste your TypeSafe API key, then open x.com.
+1. Run `node scripts/zip.mjs firefox` and extract the resulting archive.
+2. Open `about:debugging#/runtime/this-firefox`.
+3. Click **Load Temporary Add-on** and select the extracted root `manifest.json`.
+4. Open the extension's options. Paste your TypeSafe API key, then open x.com.
 
 Firefox's MV3 manifest uses `background.scripts` with module support. The source stays shared; `scripts/zip.mjs firefox` stages `manifest.firefox.json` as `manifest.json` for packaging.
 

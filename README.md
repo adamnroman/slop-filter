@@ -28,12 +28,12 @@ You bring your own TypeSafe API key. It stays in your browser. Post text is sent
 Paste this into Claude Code, Codex, or any coding agent:
 
 ```text
-Read https://raw.githubusercontent.com/adamnroman/slop-filter/main/SKILL.md and follow it to install Slop Filter in my Chrome.
+Read https://raw.githubusercontent.com/CarmeloCampos/slop-filter/main/SKILL.md and follow it to install Slop Filter in Chrome or Firefox.
 ```
 
 Your agent clones the repo and walks you through the few clicks Chrome requires. Your API key goes into the extension's options page, never into the chat.
 
-Or do it by hand: clone this repo. For Chrome, open `chrome://extensions`, turn on Developer mode, and click Load unpacked. For Firefox, open `about:debugging#/runtime/this-firefox`, click Load Temporary Add-on, and select `manifest.firefox.json`. Then open the extension's options and paste your [TypeSafe API key](https://console.typesafe.ai/keys).
+Or do it by hand: clone this repo. For Chrome, open `chrome://extensions`, turn on Developer mode, and click Load unpacked. For Firefox, run `node scripts/zip.mjs firefox`, extract the resulting archive, open `about:debugging#/runtime/this-firefox`, click Load Temporary Add-on, and select the extracted root `manifest.json`. Then open the extension's options and paste your [TypeSafe API key](https://console.typesafe.ai/keys).
 
 ## Tune it and contribute
 
@@ -41,7 +41,7 @@ Or do it by hand: clone this repo. For Chrome, open `chrome://extensions`, turn 
 
 ## Releases
 
-See [CHANGELOG.md](CHANGELOG.md) and the [releases page](https://github.com/adamnroman/slop-filter/releases). Each release has the extension as a zip you can unpack and load.
+See [CHANGELOG.md](CHANGELOG.md) and the [releases page](https://github.com/CarmeloCampos/slop-filter/releases). Each release has the extension as a zip you can unpack and load.
 
 ## Credits
 

@@ -38,4 +38,4 @@ If this policy changes, the new version is published at this address with a new 
 
 ## Contact
 
-Open an issue at https://github.com/adamnroman/slop-filter/issues.
+Open an issue at https://github.com/CarmeloCampos/slop-filter/issues.
