@@ -6,6 +6,7 @@ Every release of Slop Filter. The format follows [Keep a Changelog](https://keep
 
 ### Added
 
+- YouTube videos, on the home grid and in search results. A video is judged by its script: an excerpt of its captions from the first minute, scored with the questions about typing and punctuation left out. Videos without English captions are left alone.
 - Firefox support with a Firefox-compatible MV3 manifest and browser-specific packaging.
 
 ## [0.8.0] - 2026-09-24

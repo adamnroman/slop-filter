@@ -5,6 +5,7 @@ import {
   DEFAULT_WEIGHTS,
   HARD_RULES,
   HUMAN_TELLS,
+  KIND,
   QUESTIONS,
   buildQuestions,
   buildState,
@@ -237,6 +238,26 @@ test('this week\'s real posts, with Jev answers as guessed from the tells that f
   assert.ok(verdict('2 seconds per restyle is the part that jumps out. design systems usually feel slow right when you need to try 10 directions', { spotlight_formula: 0.85, unpolished_prose: 0.4 }) >= 0.85, 'restyle');
   // Ambiguous: a plain human update with nothing on either side stays human.
   assert.ok(verdict('We moved the launch to Tuesday because the vendor slipped. Ping me if that breaks anything.', { reads_as_model: 0.3, firsthand_specifics: 0.6 }) < 0.1, 'plain update');
+});
+
+test('a transcript drops the typing and punctuation questions and features', () => {
+  const video = { kind: KIND.TRANSCRIPT, text: 'so today we are looking at the market and honestly' };
+  const asked = Object.keys(buildQuestions(video));
+  for (const typed of ['stretched_typing', 'human_slips', 'unpolished_prose', 'colon_semicolon_pivot', 'performed_casualness', 'verbless_fragments']) {
+    assert.ok(!asked.includes(typed), `${typed} is about typing, not speech`);
+  }
+  for (const kept of ['reads_as_model', 'contrast_pivot', 'compressed_coinage', 'invented_words', 'humor', 'emphatic_repetition']) {
+    assert.ok(asked.includes(kept), `${kept} applies to speech`);
+  }
+  assert.ok(buildState(video).post.source.includes('captions'));
+  assert.equal(buildState({ text: 'a post' }).post.source, undefined);
+
+  const punctuated = { kind: KIND.TRANSCRIPT, text: 'here is the thing: it works; soooo good lol' };
+  const features = featureVector({}, punctuated);
+  for (const typed of ['colon_clauses', 'semicolon', 'stretched_letters', 'typed_laugh']) {
+    assert.equal(features[typed], 0, `${typed} is blind on captions`);
+  }
+  assert.ok(featureVector({}, { text: punctuated.text }).colon_clauses > 0, 'the same text as a typed post counts');
 });
 
 test('logistic fit learns a separable signal and ignores noise', () => {

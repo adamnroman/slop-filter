@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Slop Filter",
   "version": "0.8.0",
-  "description": "Hides AI-generated posts and comments on X, LinkedIn, Reddit, and YouTube. Scored by TypeSafe Jev.",
+  "description": "Hides AI-generated posts, comments, and videos on X, LinkedIn, Reddit, and YouTube. Scored by TypeSafe Jev.",
   "icons": {
     "16": "assets/icons/icon-16.png",
     "32": "assets/icons/icon-32.png",
@@ -81,6 +81,7 @@
       "js": [
         "src/constants.js",
         "src/dom-text.js",
+        "src/transcript.js",
         "src/sites/youtube.js",
         "src/stats-panel.js",
         "src/content.js"

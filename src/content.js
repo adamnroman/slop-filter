@@ -265,6 +265,7 @@
   }
 
   function render(element, post, result) {
+    if (result.unscorable) return clear(element);
     clear(element);
     const isFlagged = result.p >= settings.threshold;
     const isHidden = isFlagged && !revealed.has(post.id);
@@ -278,8 +279,19 @@
     mount(element, buildBar(element, post, result, isFlagged, isHidden), isCollapsed);
   }
 
+  const isTooShort = (text) => !text || text.split(/\s+/).length < MIN_WORDS;
+  // A post that cannot be judged: no text could be fetched, or too little of it. It is
+  // remembered like any result, so it is not fetched again.
+  const UNSCORABLE = Object.freeze({ unscorable: true });
+
   async function resultFor(element, post) {
     if (!results.has(post.id)) {
+      // Some sites fetch the text first, such as a video's captions.
+      if (SITE.loadText) post.text = await SITE.loadText(post);
+      if (isTooShort(post.text)) {
+        results.set(post.id, UNSCORABLE);
+        return UNSCORABLE;
+      }
       post.parentText = SITE.parentText(element, post);
       const result = await send({ type: MSG.CLASSIFY, post });
       results.set(post.id, result);
@@ -411,6 +423,11 @@
         return;
       }
       if (!isCurrent()) return;
+      // Nothing to judge: no verdict to play.
+      if (result.unscorable) {
+        render(element, post, result);
+        return;
+      }
 
       const isFlagged = result.p >= settings.threshold;
       fill = await playVerdict(element, isFlagged ? CLASS.FAIL : CLASS.PASS, line);
@@ -477,7 +494,8 @@
       clear(element);
       element.dataset[DATA.ID] = post.id;
     }
-    if (post.text.split(/\s+/).length < MIN_WORDS) return;
+    // When the adapter fetches the text later, its length is checked then.
+    if (!SITE.loadText && isTooShort(post.text)) return;
 
     if (wantsInspection(post)) {
       awaitingStage.set(element, post);
