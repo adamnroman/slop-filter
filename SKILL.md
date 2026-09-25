@@ -1,11 +1,11 @@
 ---
 name: slop-filter
-description: Install, update, tune, or change Slop Filter, a Chrome and Firefox extension that hides AI-generated posts and comments on X, LinkedIn, Reddit, and YouTube using TypeSafe Jev. Use when the user says "install Slop Filter", "set up slop filter", "update slop filter", "add a tell", "add a question", "add a site", "fit the weights", or is working in a clone of CarmeloCampos/slop-filter.
+description: Install, update, tune, or change Slop Filter, a Chrome and Firefox extension that hides AI-generated posts and comments on X, LinkedIn, Reddit, and YouTube using TypeSafe Jev. Use when the user says "install Slop Filter", "set up slop filter", "update slop filter", "add a tell", "add a question", "add a site", "fit the weights", or is working in a clone of adamnroman/slop-filter.
 ---
 
 # Slop Filter
 
-A Manifest V3 Chrome and Firefox extension with no application build step. It reads each post, asks TypeSafe Jev a set of narrow questions about the text, combines the answers into one score with weights, and hides posts over the user's threshold. The repository has the `web-ext` development dependency for Firefox validation. Repo: https://github.com/CarmeloCampos/slop-filter
+A Manifest V3 Chrome and Firefox extension with no application build step. It reads each post, asks TypeSafe Jev a set of narrow questions about the text, combines the answers into one score with weights, and hides posts over the user's threshold. The repository has the `web-ext` development dependency for Firefox validation. Repo: https://github.com/adamnroman/slop-filter
 
 Pick the section that matches what the user asked for. For anything deeper, read `docs/development.md` in the repo.
 
