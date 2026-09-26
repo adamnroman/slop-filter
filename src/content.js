@@ -640,7 +640,11 @@
     for (const key of SETTING_KEYS) {
       if (changes[key]) settings[key] = changes[key].newValue ?? DEFAULTS[key];
     }
-    if (changes[STORE.PAUSE]) pause = changes[STORE.PAUSE].newValue ?? null;
+    if (changes[STORE.PAUSE]) {
+      pause = changes[STORE.PAUSE].newValue ?? null;
+      if (pause) console.info('[xaf] paused:', pause.code, pause.message, 'until', new Date(pause.until).toLocaleString());
+      else console.info('[xaf] pause ended');
+    }
     // New weights change every probability. Features are cached in the worker.
     if (changes[STORE.WEIGHTS]) results.clear();
     STATS.setEnabled(settings.stats);

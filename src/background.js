@@ -112,9 +112,16 @@ async function setPause(pause) {
   else await chrome.storage.local.remove(STORE.PAUSE);
 }
 
+// Resolves to null when the notification was shown, or to the reason it was not.
+// Never throws: a notification that fails must not stop the pause from taking hold.
 function notify({ title, message }) {
   return new Promise((resolve) => {
-    chrome.notifications.create(NOTICE_ID, { type: 'basic', iconUrl: NOTICE_ICON, title, message }, () => resolve());
+    try {
+      const options = { type: 'basic', iconUrl: chrome.runtime.getURL(NOTICE_ICON), title, message };
+      chrome.notifications.create(NOTICE_ID, options, () => resolve(chrome.runtime.lastError?.message ?? null));
+    } catch (error) {
+      resolve(error.message);
+    }
   });
 }
 
@@ -124,15 +131,24 @@ async function pauseIfCalledFor(error) {
   const pause = pauseFor(error, await chosenProvider());
   if (!pause) return false;
   const previous = await currentPause();
-  if (shouldNotify(pause, previous)) {
-    await notify(noticeFor(pause));
-    pause.notifiedAt = Date.now();
-  } else {
-    pause.notifiedAt = previous.notifiedAt;
-  }
+  pause.notifiedAt = previous?.notifiedAt ?? null;
+  // The pause holds from here on, whatever the notification does.
   await setPause(pause);
   console.warn('[xaf] paused:', pause.code, pause.message);
+  if (shouldNotify(pause, previous)) {
+    const failure = await notify(noticeFor(pause));
+    if (failure) console.warn('[xaf] notification failed:', failure);
+    else await setPause({ ...pause, notifiedAt: Date.now() });
+  }
   return true;
+}
+
+// For the options page: proves notifications reach the screen.
+const TEST_NOTICE = Object.freeze({ title: 'Slop Filter', message: 'Notifications work. A pause will look like this.' });
+async function testNotice() {
+  const failure = await notify(TEST_NOTICE);
+  if (failure) throw new Error(`Notification failed: ${failure}`);
+  return null;
 }
 
 chrome.notifications.onClicked.addListener(async (id) => {
@@ -271,6 +287,7 @@ const HANDLERS = {
   [MSG.CLASSIFY]: (message) => classifyAndCount(message),
   [MSG.ACCOUNT]: () => account(),
   [MSG.PAIR]: (message) => pair(message),
+  [MSG.TEST_NOTICE]: () => testNotice(),
   [MSG.IS_BLOCKED]: ({ post }) => isBlocked(post),
   [MSG.LABEL]: (message) => saveLabel(message),
   [MSG.BLOCK]: ({ post }) => block(post),

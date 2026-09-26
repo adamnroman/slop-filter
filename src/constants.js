@@ -10,6 +10,7 @@ globalThis.XAF = Object.freeze({
     BLOCKED_LIST: 'xaf/blocked-list',
     ACCOUNT: 'xaf/account',
     PAIR: 'xaf/pair',
+    TEST_NOTICE: 'xaf/test-notice',
   }),
   STORE: Object.freeze({
     API_KEY: 'apiKey',

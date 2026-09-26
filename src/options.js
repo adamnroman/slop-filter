@@ -20,6 +20,7 @@
     ACCOUNT_NONE: 'Not paired. Sign in, then enter a pairing code.',
     PAIRING: 'Pairing\u2026',
     PAUSED: 'Scoring is paused.',
+    NOTICE_SENT: 'Sent. If nothing appeared, check macOS System Settings, Notifications, Google Chrome.',
     NO_CODE: 'Enter the pairing code first.',
     ACCOUNT_TRIAL: ({ email, trial_posts, trial_limit }) => `Signed in as ${email}. Trial: ${trial_posts} of ${trial_limit} posts used.`,
     ACCOUNT_ACTIVE: ({ email, posts_month }) => `Signed in as ${email}. Subscribed. ${posts_month} posts this month.`,
@@ -309,6 +310,14 @@
   $('importBlocked').addEventListener('change', importBlocked);
   $('clearLabels').addEventListener('click', clearLabels);
   $('reloadExtension').addEventListener('click', () => chrome.runtime.reload());
+  $('testNotice').addEventListener('click', async () => {
+    try {
+      await send({ type: MSG.TEST_NOTICE });
+      status(TEXT.NOTICE_SENT);
+    } catch (error) {
+      status(error.message, true);
+    }
+  });
   load();
   warnIfStale();
 })();
