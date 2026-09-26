@@ -13,7 +13,6 @@
     // A chip mounted in the site's own header line (see `chipHosts` in sites/x.js).
     INLINE: 'xaf-inline',
     FLAGGED: 'xaf-flagged',
-    ERROR: 'xaf-error',
     OFFER: 'xaf-offer',
     BUTTON: 'xaf-button',
     // Label controls. Tucked away until the chip is hovered.
@@ -45,7 +44,6 @@
     BLOCK_OFFER: (count, handle) => `${count} posts from ${handle} scored as slop. Block?`,
     BLOCK_YES: 'Block',
     BLOCK_NO: 'Not now',
-    UPSTREAM_ERROR: 'Upstream API error',
     WHY_NOT_ASKED: 'not asked, the post it replies to is unknown:',
     WHY_HARD_RULE: 'gate 2, AI hard rule, decisive alone:',
     WHY_HUMAN_VETO: 'gate 1, human tell, decisive alone:',
@@ -262,24 +260,18 @@
     if (isFullRow || !mountInline(element, bar)) element.append(bar);
   }
 
-  // Scoring failed after its retries. The bar says why instead of showing a score.
-  // Nothing is cached, so the post is scored again the next time X rebuilds it.
-  // An account refusal from Slop Filter's server is not an outage: its message stands alone.
+  // Scoring failed after its retries: Jev was down, or the request timed out. The post
+  // is left as it is, with the reason in the console. Nothing is cached, so it is scored
+  // again the next time the site rebuilds it. Problems that need the person, such as a
+  // rejected key or a used-up plan, pause the worker instead, with one notification.
   function renderError(element, error) {
     console.warn('[xaf]', error.message, error.detail ?? '');
     clear(element);
-    const bar = document.createElement('div');
-    bar.className = `${CLASS.BAR} ${CLASS.ERROR}`;
-    bar.textContent = error.code ? error.message : `${TEXT.UPSTREAM_ERROR} \u00b7 ${error.message}`;
-    // The raw response body stays in the console. A page script can read a title
-    // attribute, and a provider's error body is not ours to publish there.
-    mount(element, bar, true);
-    element.dataset[DATA.BAR] = 'true';
   }
 
   function render(element, post, result) {
     if (result.blocked) return renderBlocked(element, post);
-    if (result.unscorable) return clear(element);
+    if (result.unscorable || result.paused) return clear(element);
     clear(element);
     const isFlagged = result.p >= settings.threshold;
     const isHidden = isFlagged && !revealed.has(post.id);
@@ -316,6 +308,9 @@
       }
       post.parentText = SITE.parentText(element, post);
       const result = await send({ type: MSG.CLASSIFY, post, threshold: settings.threshold });
+      // Paused: the worker is not asking Jev right now. Not remembered, so the post is
+      // scored once the pause ends and it comes on screen again.
+      if (result.paused) return result;
       result.handle = post.handle;
       results.set(post.id, result);
       // Once per post per page, the moment the answer lands.
@@ -495,8 +490,8 @@
         return;
       }
       if (!isCurrent()) return;
-      // Nothing to judge, or an account already blocked: no verdict to play.
-      if (result.unscorable || result.blocked) {
+      // Nothing to judge, an account already blocked, or a pause: no verdict to play.
+      if (result.unscorable || result.blocked || result.paused) {
         render(element, post, result);
         return;
       }

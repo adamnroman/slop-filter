@@ -19,6 +19,7 @@
     ACCOUNT_CHECKING: 'Checking\u2026',
     ACCOUNT_NONE: 'Not paired. Sign in, then enter a pairing code.',
     PAIRING: 'Pairing\u2026',
+    PAUSED: 'Scoring is paused.',
     NO_CODE: 'Enter the pairing code first.',
     ACCOUNT_TRIAL: ({ email, trial_posts, trial_limit }) => `Signed in as ${email}. Trial: ${trial_posts} of ${trial_limit} posts used.`,
     ACCOUNT_ACTIVE: ({ email, posts_month }) => `Signed in as ${email}. Subscribed. ${posts_month} posts this month.`,
@@ -72,8 +73,16 @@
     return weights;
   }
 
+  // A pause is the one problem worth showing before anything else on this page.
+  function showPause(pause) {
+    if (!pause || Date.now() >= pause.until) return;
+    const resumes = pause.resetsAt ? ` Resumes ${new Date(pause.resetsAt).toLocaleString()}.` : '';
+    status(`${TEXT.PAUSED} ${pause.message}${resumes}`, true);
+  }
+
   async function load() {
     const stored = await chrome.storage.local.get(Object.values(STORE));
+    showPause(stored[STORE.PAUSE]);
     $('provider').value = stored[STORE.PROVIDER] ?? DEFAULTS.provider;
     $('apiKey').value = stored[STORE.API_KEY] ?? '';
     $('openrouterKey').value = stored[STORE.OPENROUTER_KEY] ?? '';

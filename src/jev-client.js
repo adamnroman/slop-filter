@@ -40,14 +40,17 @@ const STATUS_TEXT = Object.freeze({
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // `message` is short enough to show in the page. `detail` is the raw response body.
-// `code` is set when Slop Filter's server refused for an account reason, so the page
-// can tell a billing state from an outage.
+// `status` is the HTTP status, 0 for a transport failure. `code` and `resetsAt` are set
+// when Slop Filter's server refused for an account reason, so the caller can tell a
+// billing state or a cap from an outage, and knows when a cap lifts.
 export class JevError extends Error {
-  constructor(message, detail = '', code = null) {
+  constructor(message, { detail = '', status = 0, code = null, resetsAt = null } = {}) {
     super(message);
     this.name = 'JevError';
     this.detail = detail;
+    this.status = status;
     this.code = code;
+    this.resetsAt = resetsAt;
   }
 }
 
@@ -70,7 +73,9 @@ async function httpFailure(response) {
   return {
     message: account?.message ?? `HTTP ${response.status} ${reason}`.trim(),
     detail,
+    status: response.status,
     code: account?.type ?? null,
+    resetsAt: typeof account?.resets_at === 'string' ? account.resets_at : null,
     isRetryable: RETRYABLE_STATUS.has(response.status),
     retryAfterMs: Number(response.headers.get(RETRY_AFTER_HEADER)) * 1000,
   };
@@ -81,7 +86,7 @@ function transportFailure(error) {
     error.name === TIMEOUT_ERROR
       ? `Request timed out after ${TIMEOUT_MS / 1000}s`
       : `Network error: ${error.message}`;
-  return { message, detail: '', code: null, isRetryable: true, retryAfterMs: 0 };
+  return { message, detail: '', status: 0, code: null, resetsAt: null, isRetryable: true, retryAfterMs: 0 };
 }
 
 // Exponential: 0.5s, 1s, 2s. A retry-after header wins, up to the cap.
@@ -114,7 +119,7 @@ export async function askJev({ apiKey, provider = DEFAULT_PROVIDER, state, quest
     }
 
     if (!failure.isRetryable || retry === MAX_RETRIES) {
-      throw new JevError(failure.message, failure.detail, failure.code);
+      throw new JevError(failure.message, failure);
     }
     await wait(backoffMs(failure, retry));
   }

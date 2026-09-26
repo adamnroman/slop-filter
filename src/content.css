@@ -76,9 +76,8 @@
 }
 
 /* A collapsed post has nothing left but this, so here it is a full row with every
-   control showing. An error message needs the room too. */
-[data-xaf-hide="collapse"] > .xaf-bar,
-.xaf-bar.xaf-error {
+   control showing. */
+[data-xaf-hide="collapse"] > .xaf-bar {
   position: static;
   flex: 0 0 100%;
   min-height: 28px;
@@ -93,12 +92,6 @@
 
 [data-xaf-hide="collapse"] > .xaf-bar .xaf-extra {
   display: inline-block;
-}
-
-.xaf-bar.xaf-error {
-  justify-content: flex-end;
-  font-family: ui-monospace, Menlo, monospace;
-  color: rgb(255, 173, 31);
 }
 
 .xaf-button {

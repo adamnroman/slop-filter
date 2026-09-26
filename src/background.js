@@ -1,6 +1,7 @@
 // Owns the API key and every TypeSafe call. The page never sees the key.
 import './constants.js';
 import { askJev, PROVIDERS } from './jev-client.js';
+import { isActive, noticeFor, pauseFor, shouldNotify } from './pause.js';
 import {
   DEFAULT_WEIGHTS,
   buildQuestions,
@@ -28,6 +29,13 @@ const KEY_FOR = Object.freeze({
 });
 const ACCOUNT_PATH = '/v1/me';
 const PAIR_PATH = '/pair';
+const NOTICE_ID = 'xaf-paused';
+const NOTICE_ICON = 'assets/icons/icon-128.png';
+const OPTIONS_URL = 'options';
+// While paused, every post gets this answer and nothing is sent.
+const PAUSED = Object.freeze({ paused: true });
+// A change to any of these ends a pause: the fix may be in.
+const UNPAUSE_KEYS = new Set([STORE.PROVIDER, STORE.API_KEY, STORE.OPENROUTER_KEY, STORE.SESSION_TOKEN]);
 
 // Post id -> promise of { features, asked, usage }. Holding the promise dedupes concurrent asks.
 const featureCache = new Map();
@@ -46,11 +54,15 @@ async function withSlot(task) {
   }
 }
 
+async function chosenProvider() {
+  const { [STORE.PROVIDER]: stored } = await chrome.storage.local.get(STORE.PROVIDER);
+  return Object.hasOwn(PROVIDERS, stored) ? stored : DEFAULTS.provider;
+}
+
 async function fetchFeatures(post) {
-  const stored = await chrome.storage.local.get([STORE.PROVIDER, ...Object.values(KEY_FOR)]);
-  const provider = Object.hasOwn(PROVIDERS, stored[STORE.PROVIDER]) ? stored[STORE.PROVIDER] : DEFAULTS.provider;
-  const apiKey = stored[KEY_FOR[provider]];
-  if (!apiKey) throw new Error(ERROR_NO_KEY[provider]);
+  const provider = await chosenProvider();
+  const { [KEY_FOR[provider]]: apiKey } = await chrome.storage.local.get(KEY_FOR[provider]);
+  if (!apiKey) throw Object.assign(new Error(ERROR_NO_KEY[provider]), { noKey: true });
 
   const questions = buildQuestions(post);
   // Timed inside the slot, so waiting in the queue does not count. Retries do.
@@ -84,11 +96,75 @@ function cachedFeatures(post) {
   return featureCache.get(post.id);
 }
 
+// The pause: kept in storage so it survives worker restarts and the options page can
+// show it. Read once, then held here.
+let pausePromise = null;
+function currentPause() {
+  if (!pausePromise) {
+    pausePromise = chrome.storage.local.get(STORE.PAUSE).then((stored) => stored[STORE.PAUSE] ?? null);
+  }
+  return pausePromise;
+}
+
+async function setPause(pause) {
+  pausePromise = Promise.resolve(pause);
+  if (pause) await chrome.storage.local.set({ [STORE.PAUSE]: pause });
+  else await chrome.storage.local.remove(STORE.PAUSE);
+}
+
+function notify({ title, message }) {
+  return new Promise((resolve) => {
+    chrome.notifications.create(NOTICE_ID, { type: 'basic', iconUrl: NOTICE_ICON, title, message }, () => resolve());
+  });
+}
+
+// An error that means "stop asking": the account, the key, or a cap. Passing errors
+// (Jev down, a timeout) are not, and the next post simply tries again.
+async function pauseIfCalledFor(error) {
+  const pause = pauseFor(error, await chosenProvider());
+  if (!pause) return false;
+  const previous = await currentPause();
+  if (shouldNotify(pause, previous)) {
+    await notify(noticeFor(pause));
+    pause.notifiedAt = Date.now();
+  } else {
+    pause.notifiedAt = previous.notifiedAt;
+  }
+  await setPause(pause);
+  console.warn('[xaf] paused:', pause.code, pause.message);
+  return true;
+}
+
+chrome.notifications.onClicked.addListener(async (id) => {
+  if (id !== NOTICE_ID) return;
+  chrome.notifications.clear(id);
+  const pause = await currentPause();
+  const url = pause ? noticeFor(pause).url : OPTIONS_URL;
+  if (url === OPTIONS_URL) chrome.runtime.openOptionsPage();
+  else chrome.tabs.create({ url });
+});
+
+chrome.storage.onChanged.addListener((changes) => {
+  if (Object.keys(changes).some((key) => UNPAUSE_KEYS.has(key))) setPause(null);
+});
+
 // Weights are read per request, so new fitted weights apply without re-asking Jev.
 // `usage` is null when the answer came from the cache, so nothing is counted twice.
 async function classify(post) {
+  const pause = await currentPause();
+  if (isActive(pause)) return PAUSED;
+  // Its time is up: this post tries again, and pauses afresh if it is refused.
+  if (pause) await setPause(null);
+
   const isFresh = !featureCache.has(post.id);
-  const { features, asked, usage } = await cachedFeatures(post);
+  let answer;
+  try {
+    answer = await cachedFeatures(post);
+  } catch (error) {
+    if (await pauseIfCalledFor(error)) return PAUSED;
+    throw error;
+  }
+  const { features, asked, usage } = answer;
   const { [STORE.WEIGHTS]: stored } = await chrome.storage.local.get(STORE.WEIGHTS);
   const weights = stored ?? DEFAULT_WEIGHTS;
   return {
@@ -159,6 +235,7 @@ function saveLabel({ post, features, label }) {
 // first, before it fetches or sends any text.
 async function classifyAndCount({ post, threshold }) {
   const result = await classify(post);
+  if (result.paused) return result;
   const isFresh = Boolean(result.usage);
   if (isFresh && post.handle && result.p >= threshold) result.flagCount = await countFlag(post);
   return result;

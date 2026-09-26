@@ -16,6 +16,7 @@ globalThis.XAF = Object.freeze({
     PROVIDER: 'provider',
     OPENROUTER_KEY: 'openrouterKey',
     SESSION_TOKEN: 'sessionToken',
+    PAUSE: 'pause',
     THRESHOLD: 'threshold',
     MODE: 'mode',
     LABELING: 'labeling',
