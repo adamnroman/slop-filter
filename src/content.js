@@ -51,7 +51,7 @@
     WHY_HUMAN_VETO: 'gate 1, human tell, decisive alone:',
     WHY_SUM: 'gate 3, the weighted sum, shown for reference:',
   });
-  const SETTING_KEYS = [STORE.THRESHOLD, STORE.MODE, STORE.LABELING, STORE.STATS];
+  const SETTING_KEYS = [STORE.THRESHOLD, STORE.MODE, STORE.LABELING, STORE.STATS, STORE.YOUTUBE_VIDEOS];
   // Animated mode ends in the same collapsed state as collapse mode.
   const COLLAPSING_MODES = new Set([MODE.COLLAPSE, MODE.ANIMATED]);
   // Too little text to judge. These are never scored or hidden.
@@ -98,6 +98,8 @@
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
   const settings = { ...DEFAULTS };
+  // An adapter may read the settings, for a toggle that turns one of its item kinds off.
+  SITE.settings?.(settings);
   const results = new Map(); // post id -> { p, features }
   const revealed = new Set(); // post ids the user chose to show
   const labeled = new Map(); // post id -> label given this session
@@ -633,6 +635,13 @@
     }
     // New weights change every probability. Features are cached in the worker.
     if (changes[STORE.WEIGHTS]) results.clear();
+    // Turning a kind of item on or off changes what extract returns, so re-decide every element.
+    if (changes[STORE.YOUTUBE_VIDEOS]) {
+      for (const element of document.querySelectorAll(SITE.itemSelector)) {
+        clear(element);
+        delete element.dataset[DATA.ID];
+      }
+    }
     STATS.setEnabled(settings.stats);
     rerenderAll();
   });
