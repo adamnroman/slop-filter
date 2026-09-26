@@ -7,6 +7,8 @@
   "scripts": {
     "try": "node scripts/try.mjs",
     "fit": "node scripts/fit.mjs",
-    "test": "node --test"
+    "test": "node --test",
+    "zip:chrome": "node scripts/zip.mjs chrome",
+    "zip:firefox": "node scripts/zip.mjs firefox"
   }
 }

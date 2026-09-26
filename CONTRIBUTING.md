@@ -11,11 +11,13 @@ For anything else, open an issue first so we can talk about it before you build 
 ## Set up
 
 1. Fork and clone the repo.
-2. Open `chrome://extensions`, turn on Developer mode, click Load unpacked, pick the folder.
+2. For Chrome, open `chrome://extensions`, turn on Developer mode, and click Load unpacked. For Firefox, run `node scripts/zip.mjs firefox`, extract the archive, open `about:debugging#/runtime/this-firefox`, and select the extracted root `manifest.json` with Load Temporary Add-on. Verify the options page opens and the extension injects on a supported site in each browser.
 3. Open the extension's options and paste your [TypeSafe API key](https://console.typesafe.ai/keys).
 4. Run the tests: `node --test` (Node 20 or newer).
 
-There is no build step and there are no dependencies. Please keep it that way.
+There is no application build step and no dependencies. `node scripts/zip.mjs chrome` builds the Chrome package and `node scripts/zip.mjs firefox` builds the Firefox package. Both read the one `manifest.json`; the Firefox archive uses the same manifest with the Firefox background shape and add-on identity applied.
+
+Firefox validation is an optional manual step, not a dependency. With `npx` available, `npx web-ext@8.9.0 lint --source-dir <extracted package>` checks a built archive. Nothing in the repo installs or runs it for you.
 
 Using a coding agent? Point it at [SKILL.md](SKILL.md). It covers setup and every kind of change below.
 

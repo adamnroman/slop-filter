@@ -8,6 +8,7 @@ Every release of Slop Filter. The format follows [Keep a Changelog](https://keep
 
 - YouTube videos, on the home grid and in search results. A video is judged by its script: an excerpt of its captions from the first minute, scored with the questions about typing and punctuation left out. Videos without English captions are left alone.
 - Blocked accounts. After three flagged posts from one account, the flagged post offers to block it. A blocked account's posts fold on sight and are never scored. Hover any score for a Block button. The options page lists blocked accounts with unblock, export, and import. Works on every site.
+- Firefox support. The Firefox package is built from the same `manifest.json` as Chrome, with the Firefox differences applied at packaging time.
 
 ## [0.8.1] - 2026-09-25
 

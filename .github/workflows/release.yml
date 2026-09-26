@@ -24,16 +24,22 @@ jobs:
         run: node scripts/changelog.mjs "$GITHUB_REF_NAME" > release-notes.md
 
       - name: Run the tests
-        run: node --test
+        run: npm test
 
-      - name: Build the extension zip
-        run: node scripts/zip.mjs && cp dist/*.zip "slop-filter-$GITHUB_REF_NAME.zip"
+      - name: Build Chrome and Firefox extension zips
+        run: |
+          node scripts/zip.mjs chrome
+          node scripts/zip.mjs firefox
+          cp dist/slop-filter-*-chrome.zip "slop-filter-$GITHUB_REF_NAME-chrome.zip"
+          cp dist/slop-filter-*-firefox.zip "slop-filter-$GITHUB_REF_NAME-firefox.zip"
 
       - name: Publish the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: >
-          gh release create "$GITHUB_REF_NAME" "slop-filter-$GITHUB_REF_NAME.zip"
+          gh release create "$GITHUB_REF_NAME"
+          "slop-filter-$GITHUB_REF_NAME-chrome.zip"
+          "slop-filter-$GITHUB_REF_NAME-firefox.zip"
           --title "Slop Filter $GITHUB_REF_NAME"
           --notes-file release-notes.md
           --verify-tag

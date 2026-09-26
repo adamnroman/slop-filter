@@ -2,7 +2,7 @@
 
 The goal of this project is to collectively pursue an internet without having to sift through slop. It doesn't end at posts on X or comments on Reddit. It also means blocking bot accounts, YouTube and TikTok videos with AI-generated scripts, and whatever comes next.
 
-Today it is a Chrome extension that hides AI-generated posts and comments on X, LinkedIn, and Reddit, and comments and videos on YouTube. A video is judged by its script, never by its title or thumbnail.
+Today it is a Chrome and Firefox extension that hides AI-generated posts and comments on X, LinkedIn, and Reddit, and comments and videos on YouTube. A video is judged by its script, never by its title or thumbnail.
 
 ![Slop Filter scanning posts on X and LinkedIn: a scan line runs over each post, then it turns green and stays or red and folds away, while a side panel counts posts scanned, slop caught, request time, and cost.](docs/demo.gif)
 
@@ -29,12 +29,12 @@ You bring your own API key: from TypeSafe, or from OpenRouter, which resells the
 Paste this into Claude Code, Codex, or any coding agent:
 
 ```text
-Read https://raw.githubusercontent.com/adamnroman/slop-filter/main/SKILL.md and follow it to install Slop Filter in my Chrome.
+Read https://raw.githubusercontent.com/adamnroman/slop-filter/main/SKILL.md and follow it to install Slop Filter in Chrome or Firefox.
 ```
 
 Your agent clones the repo and walks you through the few clicks Chrome requires. Your API key goes into the extension's options page, never into the chat.
 
-Or do it by hand: clone this repo, open `chrome://extensions`, turn on Developer mode, click Load unpacked, pick the folder. Then open the extension's options and paste your [TypeSafe API key](https://console.typesafe.ai/keys), or pick OpenRouter and paste an [OpenRouter key](https://openrouter.ai/settings/keys).
+Or do it by hand: clone this repo. For Chrome, open `chrome://extensions`, turn on Developer mode, click Load unpacked, and pick the folder. For Firefox, run `node scripts/zip.mjs firefox`, extract the resulting archive, open `about:debugging#/runtime/this-firefox`, click Load Temporary Add-on, and select the extracted root `manifest.json`. Then open the extension's options and paste your [TypeSafe API key](https://console.typesafe.ai/keys), or pick OpenRouter and paste an [OpenRouter key](https://openrouter.ai/settings/keys).
 
 ## Tune it and contribute
 

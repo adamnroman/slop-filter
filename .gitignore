@@ -2,3 +2,5 @@ labels*.json
 node_modules/
 .DS_Store
 dist/
+.pi/
+.codegraph
