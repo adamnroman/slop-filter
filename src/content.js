@@ -290,6 +290,11 @@
   // A post that cannot be judged: no text could be fetched, or too little of it. It is
   // remembered like any result, so it is not fetched again.
   const UNSCORABLE = Object.freeze({ unscorable: true });
+  // The worker is not asking Jev right now: a used-up plan, a cap, a missing key. It
+  // announced why once. Read from storage so no text is fetched and no scan plays.
+  const PAUSED = Object.freeze({ paused: true });
+  let pause = null;
+  const isPaused = () => Boolean(pause) && Date.now() < pause.until;
 
   const BLOCKED = (handle) => ({ blocked: true, handle });
 
@@ -300,6 +305,7 @@
         results.set(post.id, BLOCKED(post.handle));
         return results.get(post.id);
       }
+      if (isPaused()) return PAUSED;
       // Some sites fetch the text first, such as a video's captions.
       if (SITE.loadText) post.text = await SITE.loadText(post);
       if (isTooShort(post.text)) {
@@ -477,6 +483,12 @@
     let fill;
     try {
       await sleep(delayMs);
+      // Paused: nothing to inspect, so no scan. The post is left as it is.
+      if (isPaused()) {
+        animated.delete(post.id);
+        if (isCurrent()) render(element, post, PAUSED);
+        return;
+      }
       element.dataset[DATA.ANIMATING] = 'true';
       const pending = resultFor(element, post);
       line = await playScan(element, pending);
@@ -628,14 +640,16 @@
     for (const key of SETTING_KEYS) {
       if (changes[key]) settings[key] = changes[key].newValue ?? DEFAULTS[key];
     }
+    if (changes[STORE.PAUSE]) pause = changes[STORE.PAUSE].newValue ?? null;
     // New weights change every probability. Features are cached in the worker.
     if (changes[STORE.WEIGHTS]) results.clear();
     STATS.setEnabled(settings.stats);
     rerenderAll();
   });
 
-  chrome.storage.local.get(SETTING_KEYS).then((stored) => {
+  chrome.storage.local.get([...SETTING_KEYS, STORE.PAUSE]).then((stored) => {
     for (const key of SETTING_KEYS) if (stored[key] !== undefined) settings[key] = stored[key];
+    pause = stored[STORE.PAUSE] ?? null;
     STATS.setEnabled(settings.stats);
     scan();
   });
