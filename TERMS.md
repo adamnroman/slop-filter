@@ -2,7 +2,7 @@
 
 Last updated: 2026-09-26
 
-These terms cover the paid option in Slop Filter, "Slop Filter's key". The extension itself is open source software under the MIT license; you run it yourself and these terms do not apply to it.
+These terms cover the paid option in Slop Filter, "Slop Filter's key". It is sold by Adam Roman, the developer of Slop Filter, as an individual ("we" below). The extension itself is open source software under the MIT license; you run it yourself and these terms do not apply to it.
 
 ## What you get
 
