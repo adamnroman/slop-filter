@@ -9,6 +9,7 @@ globalThis.XAF = Object.freeze({
     UNBLOCK: 'xaf/unblock',
     BLOCKED_LIST: 'xaf/blocked-list',
     ACCOUNT: 'xaf/account',
+    PAIR: 'xaf/pair',
   }),
   STORE: Object.freeze({
     API_KEY: 'apiKey',
@@ -38,6 +39,7 @@ globalThis.XAF = Object.freeze({
   // Error types the server answers with. Their messages are written for the chip.
   ACCOUNT_ERROR: Object.freeze({
     SIGNED_OUT: 'signed_out',
+    NO_CARD: 'no_card',
     TRIAL_OVER: 'trial_over',
     PAYMENT_FAILED: 'payment_failed',
     CANCELED: 'canceled',

@@ -27,6 +27,7 @@ const KEY_FOR = Object.freeze({
   [PROVIDER.SLOPFILTER]: STORE.SESSION_TOKEN,
 });
 const ACCOUNT_PATH = '/v1/me';
+const PAIR_PATH = '/pair';
 
 // Post id -> promise of { features, asked, usage }. Holding the promise dedupes concurrent asks.
 const featureCache = new Map();
@@ -176,9 +177,23 @@ async function account() {
   return body;
 }
 
+// Trades the pairing code from the account page for a session token, and keeps it.
+async function pair({ code }) {
+  const response = await fetch(`${SLOPFILTER_ORIGIN}${PAIR_PATH}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body?.error?.message ?? `HTTP ${response.status}`);
+  await chrome.storage.local.set({ [STORE.SESSION_TOKEN]: body.token });
+  return account();
+}
+
 const HANDLERS = {
   [MSG.CLASSIFY]: (message) => classifyAndCount(message),
   [MSG.ACCOUNT]: () => account(),
+  [MSG.PAIR]: (message) => pair(message),
   [MSG.IS_BLOCKED]: ({ post }) => isBlocked(post),
   [MSG.LABEL]: (message) => saveLabel(message),
   [MSG.BLOCK]: ({ post }) => block(post),

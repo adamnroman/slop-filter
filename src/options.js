@@ -17,13 +17,16 @@
     BLOCKED_COUNT: (n) => `${n} blocked. Their posts are hidden on sight and never sent to Jev.`,
     BAD_BLOCKED: 'blocked.json must be an object of {"site:handle": {"site", "handle"}} entries.',
     ACCOUNT_CHECKING: 'Checking\u2026',
-    ACCOUNT_NONE: 'Paste the session token from your Slop Filter account.',
+    ACCOUNT_NONE: 'Not paired. Sign in, then enter a pairing code.',
+    PAIRING: 'Pairing\u2026',
+    NO_CODE: 'Enter the pairing code first.',
     ACCOUNT_TRIAL: ({ email, trial_posts, trial_limit }) => `Signed in as ${email}. Trial: ${trial_posts} of ${trial_limit} posts used.`,
     ACCOUNT_ACTIVE: ({ email, posts_month }) => `Signed in as ${email}. Subscribed. ${posts_month} posts this month.`,
     ACCOUNT_STATE: ({ email, state }) => `Signed in as ${email}. ${ACCOUNT_STATE_TEXT[state] ?? state}`,
   });
   // How each server-side account state reads on the page.
   const ACCOUNT_STATE_TEXT = Object.freeze({
+    pending: 'No card yet. Start the free trial on the account page.',
     trial_over: 'Trial over. Subscribe to keep scoring.',
     past_due: 'Payment failed. Update your card to keep scoring.',
     canceled: 'Subscription canceled.',
@@ -41,7 +44,6 @@
     { id: 'provider', key: STORE.PROVIDER, event: 'change', read: (el) => el.value },
     { id: 'apiKey', key: STORE.API_KEY, event: 'input', pauseMs: TYPING_PAUSE_MS, read: (el) => el.value.trim() },
     { id: 'openrouterKey', key: STORE.OPENROUTER_KEY, event: 'input', pauseMs: TYPING_PAUSE_MS, read: (el) => el.value.trim() },
-    { id: 'sessionToken', key: STORE.SESSION_TOKEN, event: 'input', pauseMs: TYPING_PAUSE_MS, read: (el) => el.value.trim(), then: showAccount },
     { id: 'threshold', key: STORE.THRESHOLD, event: 'change', read: (el) => Number(el.value) / 100 },
     { id: 'mode', key: STORE.MODE, event: 'change', read: (el) => el.value },
     { id: 'labeling', key: STORE.LABELING, event: 'change', read: (el) => el.checked },
@@ -75,9 +77,8 @@
     $('provider').value = stored[STORE.PROVIDER] ?? DEFAULTS.provider;
     $('apiKey').value = stored[STORE.API_KEY] ?? '';
     $('openrouterKey').value = stored[STORE.OPENROUTER_KEY] ?? '';
-    $('sessionToken').value = stored[STORE.SESSION_TOKEN] ?? '';
     showKeyFields();
-    showAccount();
+    showAccount(Boolean(stored[STORE.SESSION_TOKEN]));
     $('threshold').value = Math.round((stored[STORE.THRESHOLD] ?? DEFAULTS.threshold) * 100);
     $('thresholdValue').textContent = $('threshold').value;
     $('mode').value = stored[STORE.MODE] ?? DEFAULTS.mode;
@@ -92,32 +93,71 @@
   const FIELD_FOR_PROVIDER = Object.freeze({
     [PROVIDER.TYPESAFE]: 'apiKey',
     [PROVIDER.OPENROUTER]: 'openrouterKey',
-    [PROVIDER.SLOPFILTER]: 'sessionToken',
+    [PROVIDER.SLOPFILTER]: 'pairCode',
   });
   function showKeyFields() {
     const chosen = FIELD_FOR_PROVIDER[$('provider').value] ?? FIELD_FOR_PROVIDER[DEFAULTS.provider];
     for (const id of Object.values(FIELD_FOR_PROVIDER)) $(id).closest('.field').hidden = id !== chosen;
   }
 
+  function send(message) {
+    return chrome.runtime.sendMessage(message).then((response) => {
+      if (response?.ok) return response.result;
+      throw new Error(response?.error ?? 'No response from background worker');
+    });
+  }
+
+  function accountLine(account) {
+    if (account.state === ACCOUNT_STATE.TRIAL) return TEXT.ACCOUNT_TRIAL(account);
+    if (account.state === ACCOUNT_STATE.ACTIVE) return TEXT.ACCOUNT_ACTIVE(account);
+    return TEXT.ACCOUNT_STATE(account);
+  }
+
+  // Paired: the account line and Sign out. Not paired: the code field and Pair.
+  function showPairing(isPaired) {
+    $('pairRow').hidden = isPaired;
+    $('pairedRow').hidden = !isPaired;
+  }
+
   // Asks the background worker, which holds the token, what the server says about the account.
-  async function showAccount() {
+  async function showAccount(isPaired) {
     const line = $('account');
-    if (!$('sessionToken').value.trim()) {
+    showPairing(isPaired);
+    if (!isPaired) {
       line.textContent = TEXT.ACCOUNT_NONE;
       return;
     }
     line.textContent = TEXT.ACCOUNT_CHECKING;
     try {
-      const account = await chrome.runtime.sendMessage({ type: MSG.ACCOUNT }).then((response) => {
-        if (response?.ok) return response.result;
-        throw new Error(response?.error ?? 'No response from background worker');
-      });
-      if (account.state === ACCOUNT_STATE.TRIAL) line.textContent = TEXT.ACCOUNT_TRIAL(account);
-      else if (account.state === ACCOUNT_STATE.ACTIVE) line.textContent = TEXT.ACCOUNT_ACTIVE(account);
-      else line.textContent = TEXT.ACCOUNT_STATE(account);
+      line.textContent = accountLine(await send({ type: MSG.ACCOUNT }));
     } catch (error) {
       line.textContent = error.message;
     }
+  }
+
+  async function pairWithCode() {
+    const code = $('pairCode').value.trim();
+    if (!code) {
+      status(TEXT.NO_CODE, true);
+      return;
+    }
+    $('account').textContent = TEXT.PAIRING;
+    try {
+      const account = await send({ type: MSG.PAIR, code });
+      $('pairCode').value = '';
+      $('account').textContent = accountLine(account);
+      showPairing(true);
+      status(TEXT.SAVED);
+    } catch (error) {
+      status(error.message, true);
+      $('account').textContent = TEXT.ACCOUNT_NONE;
+    }
+  }
+
+  async function signOut() {
+    await chrome.storage.local.remove(STORE.SESSION_TOKEN);
+    showAccount(false);
+    status(TEXT.SAVED);
   }
 
   function showLabelCounts(labels) {
@@ -249,6 +289,11 @@
   });
   FIELDS.forEach(saveOnChange);
   $('provider').addEventListener('change', showKeyFields);
+  $('pair').addEventListener('click', pairWithCode);
+  $('pairCode').addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') pairWithCode();
+  });
+  $('signOut').addEventListener('click', signOut);
   $('weights').addEventListener('change', saveWeights);
   $('exportLabels').addEventListener('click', exportLabels);
   $('exportBlocked').addEventListener('click', exportBlocked);

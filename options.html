@@ -60,11 +60,18 @@
 
         <div class="field" id="slopfilterField">
           <div class="field-head">
-            <label for="sessionToken">Slop Filter session token</label>
+            <label for="pairCode">Slop Filter account</label>
+            <a id="signIn" class="hint" href="https://slop-filter-api.adamnroman.workers.dev/account" target="_blank" rel="noopener noreferrer">Sign in</a>
           </div>
-          <input id="sessionToken" type="password" autocomplete="off" spellcheck="false" aria-describedby="slopfilterHint" />
           <p id="account" class="hint" aria-live="polite"></p>
-          <p id="slopfilterHint" class="hint">Same Jev model, same answers, no key of your own. Post text goes to Slop Filter's server, which forwards it to TypeSafe. The server keeps your email, your subscription state, and daily counts. Never the posts.</p>
+          <div class="actions" id="pairRow">
+            <input id="pairCode" type="text" autocomplete="off" spellcheck="false" placeholder="Pairing code, like ABCD-EFGH" aria-describedby="slopfilterHint" />
+            <button id="pair" type="button" class="button">Pair</button>
+          </div>
+          <div class="actions" id="pairedRow" hidden>
+            <button id="signOut" type="button" class="button">Sign out</button>
+          </div>
+          <p id="slopfilterHint" class="hint">Same Jev model, same answers, no key of your own. Sign in, press "Show a pairing code", and enter it here. Post text goes to Slop Filter's server, which forwards it to TypeSafe. The server keeps your email, your subscription state, and daily counts. Never the posts.</p>
         </div>
 
         <div class="field">

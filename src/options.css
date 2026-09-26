@@ -227,6 +227,7 @@ summary {
 }
 
 input[type='password'],
+input[type='text'],
 select,
 textarea {
   width: 100%;
@@ -381,6 +382,14 @@ input[type='range']:focus-visible::-webkit-slider-thumb {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
+}
+
+/* The pairing code shares its row with the Pair button. */
+.actions > input[type='text'] {
+  flex: 1 1 200px;
+  width: auto;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
 }
 
 .button {
