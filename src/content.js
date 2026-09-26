@@ -113,6 +113,7 @@
       if (response?.ok) return response.result;
       const error = new Error(response?.error ?? 'No response from background worker');
       error.detail = response?.detail ?? '';
+      error.code = response?.code ?? null;
       throw error;
     });
   }
@@ -263,12 +264,13 @@
 
   // Scoring failed after its retries. The bar says why instead of showing a score.
   // Nothing is cached, so the post is scored again the next time X rebuilds it.
+  // An account refusal from Slop Filter's server is not an outage: its message stands alone.
   function renderError(element, error) {
     console.warn('[xaf]', error.message, error.detail ?? '');
     clear(element);
     const bar = document.createElement('div');
     bar.className = `${CLASS.BAR} ${CLASS.ERROR}`;
-    bar.textContent = `${TEXT.UPSTREAM_ERROR} \u00b7 ${error.message}`;
+    bar.textContent = error.code ? error.message : `${TEXT.UPSTREAM_ERROR} \u00b7 ${error.message}`;
     // The raw response body stays in the console. A page script can read a title
     // attribute, and a provider's error body is not ours to publish there.
     mount(element, bar, true);

@@ -1,5 +1,5 @@
 (() => {
-  const { STORE, LABEL, DEFAULTS, PROVIDER } = globalThis.XAF;
+  const { MSG, STORE, LABEL, DEFAULTS, PROVIDER } = globalThis.XAF;
 
   const EXPORT_FILENAME = 'labels.json';
   const BLOCKED_FILENAME = 'blocked.json';
@@ -16,7 +16,19 @@
     NO_BLOCKED: 'No blocked accounts. Hover a score and click Block, or accept the offer after a few flagged posts.',
     BLOCKED_COUNT: (n) => `${n} blocked. Their posts are hidden on sight and never sent to Jev.`,
     BAD_BLOCKED: 'blocked.json must be an object of {"site:handle": {"site", "handle"}} entries.',
+    ACCOUNT_CHECKING: 'Checking\u2026',
+    ACCOUNT_NONE: 'Paste the session token from your Slop Filter account.',
+    ACCOUNT_TRIAL: ({ email, trial_posts, trial_limit }) => `Signed in as ${email}. Trial: ${trial_posts} of ${trial_limit} posts used.`,
+    ACCOUNT_ACTIVE: ({ email, posts_month }) => `Signed in as ${email}. Subscribed. ${posts_month} posts this month.`,
+    ACCOUNT_STATE: ({ email, state }) => `Signed in as ${email}. ${ACCOUNT_STATE_TEXT[state] ?? state}`,
   });
+  // How each server-side account state reads on the page.
+  const ACCOUNT_STATE_TEXT = Object.freeze({
+    trial_over: 'Trial over. Subscribe to keep scoring.',
+    past_due: 'Payment failed. Update your card to keep scoring.',
+    canceled: 'Subscription canceled.',
+  });
+  const ACCOUNT_STATE = Object.freeze({ TRIAL: 'trial', ACTIVE: 'active' });
 
   // Styled in options.css via [data-state].
   const STATUS_STATE = Object.freeze({ OK: 'ok', ERROR: 'error' });
@@ -29,6 +41,7 @@
     { id: 'provider', key: STORE.PROVIDER, event: 'change', read: (el) => el.value },
     { id: 'apiKey', key: STORE.API_KEY, event: 'input', pauseMs: TYPING_PAUSE_MS, read: (el) => el.value.trim() },
     { id: 'openrouterKey', key: STORE.OPENROUTER_KEY, event: 'input', pauseMs: TYPING_PAUSE_MS, read: (el) => el.value.trim() },
+    { id: 'sessionToken', key: STORE.SESSION_TOKEN, event: 'input', pauseMs: TYPING_PAUSE_MS, read: (el) => el.value.trim(), then: showAccount },
     { id: 'threshold', key: STORE.THRESHOLD, event: 'change', read: (el) => Number(el.value) / 100 },
     { id: 'mode', key: STORE.MODE, event: 'change', read: (el) => el.value },
     { id: 'labeling', key: STORE.LABELING, event: 'change', read: (el) => el.checked },
@@ -62,7 +75,9 @@
     $('provider').value = stored[STORE.PROVIDER] ?? DEFAULTS.provider;
     $('apiKey').value = stored[STORE.API_KEY] ?? '';
     $('openrouterKey').value = stored[STORE.OPENROUTER_KEY] ?? '';
+    $('sessionToken').value = stored[STORE.SESSION_TOKEN] ?? '';
     showKeyFields();
+    showAccount();
     $('threshold').value = Math.round((stored[STORE.THRESHOLD] ?? DEFAULTS.threshold) * 100);
     $('thresholdValue').textContent = $('threshold').value;
     $('mode').value = stored[STORE.MODE] ?? DEFAULTS.mode;
@@ -73,11 +88,36 @@
     showBlocked(stored[STORE.BLOCKED] ?? {});
   }
 
-  // Only the chosen provider's key field is shown.
+  // Only the chosen provider's credential field is shown.
+  const FIELD_FOR_PROVIDER = Object.freeze({
+    [PROVIDER.TYPESAFE]: 'apiKey',
+    [PROVIDER.OPENROUTER]: 'openrouterKey',
+    [PROVIDER.SLOPFILTER]: 'sessionToken',
+  });
   function showKeyFields() {
-    const isOpenRouter = $('provider').value === PROVIDER.OPENROUTER;
-    $('openrouterField').hidden = !isOpenRouter;
-    $('apiKey').closest('.field').hidden = isOpenRouter;
+    const chosen = FIELD_FOR_PROVIDER[$('provider').value] ?? FIELD_FOR_PROVIDER[DEFAULTS.provider];
+    for (const id of Object.values(FIELD_FOR_PROVIDER)) $(id).closest('.field').hidden = id !== chosen;
+  }
+
+  // Asks the background worker, which holds the token, what the server says about the account.
+  async function showAccount() {
+    const line = $('account');
+    if (!$('sessionToken').value.trim()) {
+      line.textContent = TEXT.ACCOUNT_NONE;
+      return;
+    }
+    line.textContent = TEXT.ACCOUNT_CHECKING;
+    try {
+      const account = await chrome.runtime.sendMessage({ type: MSG.ACCOUNT }).then((response) => {
+        if (response?.ok) return response.result;
+        throw new Error(response?.error ?? 'No response from background worker');
+      });
+      if (account.state === ACCOUNT_STATE.TRIAL) line.textContent = TEXT.ACCOUNT_TRIAL(account);
+      else if (account.state === ACCOUNT_STATE.ACTIVE) line.textContent = TEXT.ACCOUNT_ACTIVE(account);
+      else line.textContent = TEXT.ACCOUNT_STATE(account);
+    } catch (error) {
+      line.textContent = error.message;
+    }
   }
 
   function showLabelCounts(labels) {
@@ -87,13 +127,15 @@
   }
 
   // Settings save by themselves, one field at a time, the moment they change.
-  function saveOnChange({ id, key, event, pauseMs = 0, read }) {
+  // `then` runs after the save, for fields whose value is worth checking against a server.
+  function saveOnChange({ id, key, event, pauseMs = 0, read, then }) {
     let pending;
     $(id).addEventListener(event, () => {
       clearTimeout(pending);
       pending = setTimeout(async () => {
         await chrome.storage.local.set({ [key]: read($(id)) });
         status(TEXT.SAVED);
+        then?.();
       }, pauseMs);
     });
   }

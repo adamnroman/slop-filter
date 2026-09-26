@@ -11,17 +11,22 @@ import {
   requestCostUsd,
 } from './model.js';
 
-const { MSG, STORE, PROVIDER, DEFAULTS } = globalThis.XAF;
+const { MSG, STORE, PROVIDER, DEFAULTS, SLOPFILTER_ORIGIN } = globalThis.XAF;
 
 const MAX_IN_FLIGHT = 6;
 const ERROR_NO_KEY = Object.freeze({
   [PROVIDER.TYPESAFE]: 'No TypeSafe API key set. Open the extension options.',
   [PROVIDER.OPENROUTER]: 'No OpenRouter API key set. Open the extension options.',
+  [PROVIDER.SLOPFILTER]: 'Not signed in to Slop Filter. Open the extension options.',
 });
+// What goes in the Authorization header for each provider: a key, or the session token
+// Slop Filter's server issued.
 const KEY_FOR = Object.freeze({
   [PROVIDER.TYPESAFE]: STORE.API_KEY,
   [PROVIDER.OPENROUTER]: STORE.OPENROUTER_KEY,
+  [PROVIDER.SLOPFILTER]: STORE.SESSION_TOKEN,
 });
+const ACCOUNT_PATH = '/v1/me';
 
 // Post id -> promise of { features, asked, usage }. Holding the promise dedupes concurrent asks.
 const featureCache = new Map();
@@ -41,7 +46,7 @@ async function withSlot(task) {
 }
 
 async function fetchFeatures(post) {
-  const stored = await chrome.storage.local.get([STORE.PROVIDER, STORE.API_KEY, STORE.OPENROUTER_KEY]);
+  const stored = await chrome.storage.local.get([STORE.PROVIDER, ...Object.values(KEY_FOR)]);
   const provider = Object.hasOwn(PROVIDERS, stored[STORE.PROVIDER]) ? stored[STORE.PROVIDER] : DEFAULTS.provider;
   const apiKey = stored[KEY_FOR[provider]];
   if (!apiKey) throw new Error(ERROR_NO_KEY[provider]);
@@ -158,8 +163,22 @@ async function classifyAndCount({ post, threshold }) {
   return result;
 }
 
+// The signed-in Slop Filter account, for the options page. The server's own error
+// message is thrown when it refuses, so the page can show it as is.
+async function account() {
+  const { [STORE.SESSION_TOKEN]: token } = await chrome.storage.local.get(STORE.SESSION_TOKEN);
+  if (!token) throw new Error(ERROR_NO_KEY[PROVIDER.SLOPFILTER]);
+  const response = await fetch(`${SLOPFILTER_ORIGIN}${ACCOUNT_PATH}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body?.error?.message ?? `HTTP ${response.status}`);
+  return body;
+}
+
 const HANDLERS = {
   [MSG.CLASSIFY]: (message) => classifyAndCount(message),
+  [MSG.ACCOUNT]: () => account(),
   [MSG.IS_BLOCKED]: ({ post }) => isBlocked(post),
   [MSG.LABEL]: (message) => saveLabel(message),
   [MSG.BLOCK]: ({ post }) => block(post),
@@ -173,6 +192,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   handler(message)
     .then((result) => sendResponse({ ok: true, result }))
-    .catch((error) => sendResponse({ ok: false, error: error.message, detail: error.detail }));
+    .catch((error) => sendResponse({ ok: false, error: error.message, detail: error.detail, code: error.code }));
   return true;
 });

@@ -35,6 +35,7 @@
             <select id="provider">
               <option value="typesafe">TypeSafe directly</option>
               <option value="openrouter">OpenRouter, billed to your OpenRouter credits</option>
+              <option value="slopfilter">Slop Filter's key, $3.99 a month, 100 posts free</option>
             </select>
           </div>
         </div>
@@ -55,6 +56,15 @@
           </div>
           <input id="openrouterKey" type="password" autocomplete="off" spellcheck="false" aria-describedby="openrouterHint" />
           <p id="openrouterHint" class="hint">Same Jev model, same answers. Post text goes to OpenRouter, which forwards it to TypeSafe and bills your credits.</p>
+        </div>
+
+        <div class="field" id="slopfilterField">
+          <div class="field-head">
+            <label for="sessionToken">Slop Filter session token</label>
+          </div>
+          <input id="sessionToken" type="password" autocomplete="off" spellcheck="false" aria-describedby="slopfilterHint" />
+          <p id="account" class="hint" aria-live="polite"></p>
+          <p id="slopfilterHint" class="hint">Same Jev model, same answers, no key of your own. Post text goes to Slop Filter's server, which forwards it to TypeSafe. The server keeps your email, your subscription state, and daily counts. Never the posts.</p>
         </div>
 
         <div class="field">
