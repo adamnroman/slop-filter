@@ -295,6 +295,14 @@
   const PAUSED = Object.freeze({ paused: true });
   let pause = null;
   const isPaused = () => Boolean(pause) && Date.now() < pause.until;
+  // When a pause ends by time, the posts on screen are re-decided, so a page that
+  // never rebuilds them (a Reddit thread, one LinkedIn post) is scored without a reload.
+  let pauseEnds;
+  const MAX_TIMER_MS = 2 ** 31 - 1;
+  function watchPause() {
+    clearTimeout(pauseEnds);
+    if (isPaused()) pauseEnds = setTimeout(rerenderAll, Math.min(pause.until - Date.now(), MAX_TIMER_MS));
+  }
 
   const BLOCKED = (handle) => ({ blocked: true, handle });
 
@@ -642,8 +650,9 @@
     }
     if (changes[STORE.PAUSE]) {
       pause = changes[STORE.PAUSE].newValue ?? null;
-      if (pause) console.info('[xaf] paused:', pause.code, pause.message, 'until', new Date(pause.until).toLocaleString());
-      else console.info('[xaf] pause ended');
+      if (isPaused()) console.info('[xaf] paused:', pause.code, pause.message, 'until', new Date(pause.until).toLocaleString());
+      else console.info('[xaf] not paused');
+      watchPause();
     }
     // New weights change every probability. Features are cached in the worker.
     if (changes[STORE.WEIGHTS]) results.clear();
@@ -654,6 +663,7 @@
   chrome.storage.local.get([...SETTING_KEYS, STORE.PAUSE]).then((stored) => {
     for (const key of SETTING_KEYS) if (stored[key] !== undefined) settings[key] = stored[key];
     pause = stored[STORE.PAUSE] ?? null;
+    watchPause();
     STATS.setEnabled(settings.stats);
     scan();
   });

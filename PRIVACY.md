@@ -2,7 +2,7 @@
 
 Last updated: 2026-09-26
 
-Slop Filter is a browser extension that hides AI-generated posts. It has no analytics and no ads. With your own API key it has no server and no account. With the paid "Slop Filter's key" option it has both, and the section on it below says exactly what they hold. This page says what the extension reads, what leaves your browser, and what stays in it.
+Slop Filter is a browser extension that hides AI-generated posts. It has no analytics and no ads. With your own API key it has no server and no account. With the paid "Use mine" option it has both, and the section on it below says exactly what they hold. This page says what the extension reads, what leaves your browser, and what stays in it.
 
 ## What it reads
 
@@ -14,7 +14,7 @@ To score a post, the extension sends that post's text, and the text of the post 
 
 - The TypeSafe API at `api.typesafe.ai`, using the TypeSafe API key you entered. This is the default.
 - OpenRouter at `openrouter.ai`, using the OpenRouter API key you entered. OpenRouter forwards the text to TypeSafe and bills your OpenRouter credits. See the [OpenRouter privacy policy](https://openrouter.ai/privacy).
-- Slop Filter's own server at `slop-filter-api.adamnroman.workers.dev`, if you chose "Slop Filter's key". It forwards the text to TypeSafe on our key. See the section below.
+- Slop Filter's own server at `slop-filter-api.adamnroman.workers.dev`, if you chose "Use mine". It forwards the text to TypeSafe on our key. See the section below.
 
 That is the only place data is sent.
 
@@ -22,7 +22,7 @@ That is the only place data is sent.
 - With your own key, nothing is sent to the developers of Slop Filter. We never see your feed, your key, or your labels.
 - TypeSafe handles what it receives under its own terms. See the [TypeSafe privacy policy](https://typesafe.ai/legal/privacy-policy) and [data processing agreement](https://typesafe.ai/legal/data-processing). TypeSafe states that it does not train its models on customer requests.
 
-## Slop Filter's key, if you chose it
+## "Use mine", if you chose it
 
 This is the paid option. The extension sends each post to our server, which scores it with Jev and answers. The server runs on Cloudflare Workers with a Cloudflare D1 database.
 
@@ -42,9 +42,9 @@ The sign-in email is sent through Resend from `signin@slopfilter.dev`. See the [
 
 ## What stays in your browser
 
-Stored in Chrome's local extension storage, on your device only:
+Stored in the browser's local extension storage, on your device only:
 
-- Your TypeSafe API key, your OpenRouter key, or the session token for Slop Filter's key, whichever you use.
+- Your TypeSafe API key, your OpenRouter key, or the session token for "Use mine", whichever you use.
 - Your settings: the threshold, what happens to a flagged post, and the other switches on the options page.
 - Your labels. When you mark a post as AI or Human, the extension saves that post's text, the text of the post it replied to if any, the author's handle, the site, its scores, and your label. They leave your browser only if you click "Export labels.json" and share the file yourself. "Clear labels" on the options page deletes them.
 

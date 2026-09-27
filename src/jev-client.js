@@ -14,6 +14,8 @@ export const PROVIDERS = Object.freeze({
   slopfilter: Object.freeze({ endpoint: `${SLOPFILTER_ORIGIN}/v1/systemone`, model: 'jev-1.13.0' }),
 });
 const DEFAULT_PROVIDER = 'typesafe';
+// The one provider whose error bodies carry account codes. Nobody else's are read.
+const ACCOUNT_PROVIDER = 'slopfilter';
 const ACCOUNT_ERROR_TYPES = new Set(Object.values(ACCOUNT_ERROR));
 const TIMEOUT_MS = 10_000;
 // One call makes the first attempt plus at most this many retries, then gives up.
@@ -55,8 +57,9 @@ export class JevError extends Error {
 }
 
 // Slop Filter's server answers `{ error: { type, message } }`. Only its own account
-// types are adopted; any other provider's error body stays in `detail`.
-function accountError(detail) {
+// types are adopted, and only from it; any other provider's error body stays in `detail`.
+function accountError(detail, provider) {
+  if (provider !== ACCOUNT_PROVIDER) return null;
   try {
     const { error } = JSON.parse(detail);
     if (ACCOUNT_ERROR_TYPES.has(error?.type) && typeof error.message === 'string') return error;
@@ -66,10 +69,10 @@ function accountError(detail) {
   return null;
 }
 
-async function httpFailure(response) {
+async function httpFailure(response, provider) {
   const reason = STATUS_TEXT[response.status] ?? response.statusText;
   const detail = await response.text().catch(() => '');
-  const account = accountError(detail);
+  const account = accountError(detail, provider);
   return {
     message: account?.message ?? `HTTP ${response.status} ${reason}`.trim(),
     detail,
@@ -113,7 +116,7 @@ export async function askJev({ apiKey, provider = DEFAULT_PROVIDER, state, quest
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
       if (response.ok) return await response.json();
-      failure = await httpFailure(response);
+      failure = await httpFailure(response, provider);
     } catch (error) {
       failure = transportFailure(error);
     }

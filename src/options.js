@@ -20,6 +20,7 @@
     ACCOUNT_NONE: 'Not paired. Sign in, then enter a pairing code.',
     PAIRING: 'Pairing\u2026',
     PAUSED: 'Scoring is paused.',
+    RESUMED: 'Resumed. The next post will ask again.',
     SIGN_IN_LINK: 'Sign in',
     ACCOUNT_LINK: 'Account',
     NOTICE_SENT: 'Sent. If nothing appeared, check macOS System Settings, Notifications, Google Chrome.',
@@ -31,7 +32,7 @@
   // How each server-side account state reads on the page.
   const ACCOUNT_STATE_TEXT = Object.freeze({
     pending: 'No card yet. Start the free trial on the account page.',
-    trial_over: 'Trial over. Subscribe to keep scoring.',
+    trial_over: "Trial over, and the $3.99 charge didn't go through. Check your card on the account page.",
     past_due: 'Payment failed. Update your card to keep scoring.',
     canceled: 'Subscription canceled.',
   });
@@ -77,9 +78,18 @@
 
   // A pause is the one problem worth showing before anything else on this page.
   function showPause(pause) {
-    if (!pause || Date.now() >= pause.until) return;
-    const resumes = pause.resetsAt ? ` Resumes ${new Date(pause.resetsAt).toLocaleString()}.` : '';
+    const isPaused = Boolean(pause) && Date.now() < pause.until;
+    $('resume').hidden = !isPaused;
+    if (!isPaused) return;
+    const resumes = ` Resumes ${new Date(pause.until).toLocaleString()}.`;
     status(`${TEXT.PAUSED} ${pause.message}${resumes}`, true);
+  }
+
+  // Ends the pause by hand. The next post asks again; if it is refused, it pauses afresh.
+  async function resumeNow() {
+    await chrome.storage.local.remove(STORE.PAUSE);
+    $('resume').hidden = true;
+    status(TEXT.RESUMED);
   }
 
   async function load() {
@@ -87,8 +97,11 @@
     showPause(stored[STORE.PAUSE]);
     $('apiKey').value = stored[STORE.API_KEY] ?? '';
     $('openrouterKey').value = stored[STORE.OPENROUTER_KEY] ?? '';
+    hasToken = Boolean(stored[STORE.SESSION_TOKEN]);
     showProvider(stored[STORE.PROVIDER] ?? DEFAULTS.provider);
-    showAccount(Boolean(stored[STORE.SESSION_TOKEN]));
+    // The server is only asked about the account when the paid plan is the one in use.
+    if (checked('plan') === PLAN.PAID) showAccount(hasToken);
+    else showPairing(hasToken);
     $('threshold').value = Math.round((stored[STORE.THRESHOLD] ?? DEFAULTS.threshold) * 100);
     $('thresholdValue').textContent = $('threshold').value;
     $('mode').value = stored[STORE.MODE] ?? DEFAULTS.mode;
@@ -154,10 +167,14 @@
     );
   }
 
+  let hasToken = false;
+
   async function saveProvider() {
     showKeyFields();
-    await chrome.storage.local.set({ [STORE.PROVIDER]: providerFromChoice() });
+    const provider = providerFromChoice();
+    await chrome.storage.local.set({ [STORE.PROVIDER]: provider });
     status(TEXT.SAVED);
+    if (provider === PROVIDER.SLOPFILTER) showAccount(hasToken);
   }
 
   function send(message) {
@@ -205,6 +222,7 @@
     $('account').textContent = TEXT.PAIRING;
     try {
       const account = await send({ type: MSG.PAIR, code });
+      hasToken = true;
       $('pairCode').value = '';
       $('account').textContent = accountLine(account);
       showPairing(true);
@@ -217,6 +235,7 @@
 
   async function signOut() {
     await chrome.storage.local.remove(STORE.SESSION_TOKEN);
+    hasToken = false;
     showAccount(false);
     status(TEXT.SAVED);
   }
@@ -357,6 +376,7 @@
     if (event.key === 'Enter') pairWithCode();
   });
   $('signOut').addEventListener('click', signOut);
+  $('resume').addEventListener('click', resumeNow);
   $('weights').addEventListener('change', saveWeights);
   $('exportLabels').addEventListener('click', exportLabels);
   $('exportBlocked').addEventListener('click', exportBlocked);

@@ -36,6 +36,12 @@ const OPTIONS_URL = 'options';
 const PAUSED = Object.freeze({ paused: true });
 // A change to any of these ends a pause: the fix may be in.
 const UNPAUSE_KEYS = new Set([STORE.PROVIDER, STORE.API_KEY, STORE.OPENROUTER_KEY, STORE.SESSION_TOKEN]);
+// Counts those changes. A refusal of a request made before one is not a pause: it was
+// answered for a provider or key the person has since changed.
+let generation = 0;
+// Messages only the extension's own pages may send, never a content script on a site.
+const EXTENSION_ONLY = new Set([MSG.PAIR, MSG.ACCOUNT, MSG.TEST_NOTICE]);
+const SESSION_TOKEN_PREFIX = 'sf_';
 
 // Post id -> promise of { features, asked, usage }. Holding the promise dedupes concurrent asks.
 const featureCache = new Map();
@@ -126,19 +132,23 @@ function notify({ title, message }) {
 }
 
 // An error that means "stop asking": the account, the key, or a cap. Passing errors
-// (Jev down, a timeout) are not, and the next post simply tries again.
-async function pauseIfCalledFor(error) {
+// (Jev down, a timeout) are not, and the next post simply tries again. `asOf` is the
+// generation the request was made in; a change since then makes the refusal stale.
+async function pauseIfCalledFor(error, asOf) {
+  if (asOf !== generation) return false;
   const pause = pauseFor(error, await chosenProvider());
   if (!pause) return false;
+  // An earlier pause for the same problem, expired or not, carries when it was announced.
   const previous = await currentPause();
   pause.notifiedAt = previous?.notifiedAt ?? null;
+  if (asOf !== generation) return false;
   // The pause holds from here on, whatever the notification does.
   await setPause(pause);
   console.warn('[xaf] paused:', pause.code, pause.message);
   if (shouldNotify(pause, previous)) {
     const failure = await notify(noticeFor(pause));
     if (failure) console.warn('[xaf] notification failed:', failure);
-    else await setPause({ ...pause, notifiedAt: Date.now() });
+    else if (asOf === generation) await setPause({ ...pause, notifiedAt: Date.now() });
   }
   return true;
 }
@@ -161,23 +171,27 @@ chrome.notifications.onClicked.addListener(async (id) => {
 });
 
 chrome.storage.onChanged.addListener((changes) => {
-  if (Object.keys(changes).some((key) => UNPAUSE_KEYS.has(key))) setPause(null);
+  // The options page can end a pause too ("Resume now"): keep the copy here in step.
+  if (changes[STORE.PAUSE]) pausePromise = Promise.resolve(changes[STORE.PAUSE].newValue ?? null);
+  if (Object.keys(changes).some((key) => UNPAUSE_KEYS.has(key))) {
+    generation += 1;
+    setPause(null);
+  }
 });
 
 // Weights are read per request, so new fitted weights apply without re-asking Jev.
 // `usage` is null when the answer came from the cache, so nothing is counted twice.
 async function classify(post) {
-  const pause = await currentPause();
-  if (isActive(pause)) return PAUSED;
-  // Its time is up: this post tries again, and pauses afresh if it is refused.
-  if (pause) await setPause(null);
+  // An expired pause stays in storage: it remembers when its problem was last announced.
+  if (isActive(await currentPause())) return PAUSED;
 
   const isFresh = !featureCache.has(post.id);
+  const asOf = generation;
   let answer;
   try {
     answer = await cachedFeatures(post);
   } catch (error) {
-    if (await pauseIfCalledFor(error)) return PAUSED;
+    if (await pauseIfCalledFor(error, asOf)) return PAUSED;
     throw error;
   }
   const { features, asked, usage } = answer;
@@ -279,6 +293,9 @@ async function pair({ code }) {
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(body?.error?.message ?? `HTTP ${response.status}`);
+  if (typeof body?.token !== 'string' || !body.token.startsWith(SESSION_TOKEN_PREFIX)) {
+    throw new Error('The server did not return a session token.');
+  }
   await chrome.storage.local.set({ [STORE.SESSION_TOKEN]: body.token });
   return account();
 }
@@ -295,9 +312,10 @@ const HANDLERS = {
   [MSG.BLOCKED_LIST]: async () => (await loadAccounts()).blocked,
 };
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const handler = HANDLERS[message?.type];
   if (!handler) return false;
+  if (EXTENSION_ONLY.has(message.type) && !sender.url?.startsWith(chrome.runtime.getURL(''))) return false;
 
   handler(message)
     .then((result) => sendResponse({ ok: true, result }))

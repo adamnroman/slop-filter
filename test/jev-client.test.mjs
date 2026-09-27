@@ -151,11 +151,16 @@ test("an account refusal from Slop Filter's server carries its type and its own 
   assert.deepEqual(waits, []);
 });
 
-test("another provider's error body is kept as detail, never adopted as the message", async () => {
-  stubFetch([() => reply(401, '{"error":{"type":"authentication_error","message":"Invalid API key"}}')]);
-  await assert.rejects(askJev(REQUEST), (error) => {
-    assert.equal(error.code, null);
-    assert.equal(error.message, 'HTTP 401 Unauthorized');
-    return true;
-  });
+test("another provider's error body is kept as detail, never adopted, even with a matching type", async () => {
+  const lookalike = '{"error":{"type":"canceled","message":"Your subscription is canceled."}}';
+  for (const provider of ['typesafe', 'openrouter']) {
+    stubFetch([() => reply(403, lookalike)]);
+    await assert.rejects(askJev({ ...REQUEST, provider }), (error) => {
+      assert.equal(error.code, null, `${provider} did not adopt the code`);
+      assert.equal(error.message, 'HTTP 403 Forbidden');
+      assert.equal(error.status, 403);
+      assert.equal(error.detail, lookalike);
+      return true;
+    });
+  }
 });
