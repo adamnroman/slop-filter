@@ -20,6 +20,8 @@
     ACCOUNT_NONE: 'Not paired. Sign in, then enter a pairing code.',
     PAIRING: 'Pairing\u2026',
     PAUSED: 'Scoring is paused.',
+    SIGN_IN_LINK: 'Sign in',
+    ACCOUNT_LINK: 'Account',
     NOTICE_SENT: 'Sent. If nothing appeared, check macOS System Settings, Notifications, Google Chrome.',
     NO_CODE: 'Enter the pairing code first.',
     ACCOUNT_TRIAL: ({ email, trial_posts, trial_limit }) => `Signed in as ${email}. Trial: ${trial_posts} of ${trial_limit} posts used.`,
@@ -43,7 +45,6 @@
   // Every simple setting: which element, which storage key, how to read it, and the
   // event that means "the user is done changing it".
   const FIELDS = Object.freeze([
-    { id: 'provider', key: STORE.PROVIDER, event: 'change', read: (el) => el.value },
     { id: 'apiKey', key: STORE.API_KEY, event: 'input', pauseMs: TYPING_PAUSE_MS, read: (el) => el.value.trim() },
     { id: 'openrouterKey', key: STORE.OPENROUTER_KEY, event: 'input', pauseMs: TYPING_PAUSE_MS, read: (el) => el.value.trim() },
     { id: 'threshold', key: STORE.THRESHOLD, event: 'change', read: (el) => Number(el.value) / 100 },
@@ -84,10 +85,9 @@
   async function load() {
     const stored = await chrome.storage.local.get(Object.values(STORE));
     showPause(stored[STORE.PAUSE]);
-    $('provider').value = stored[STORE.PROVIDER] ?? DEFAULTS.provider;
     $('apiKey').value = stored[STORE.API_KEY] ?? '';
     $('openrouterKey').value = stored[STORE.OPENROUTER_KEY] ?? '';
-    showKeyFields();
+    showProvider(stored[STORE.PROVIDER] ?? DEFAULTS.provider);
     showAccount(Boolean(stored[STORE.SESSION_TOKEN]));
     $('threshold').value = Math.round((stored[STORE.THRESHOLD] ?? DEFAULTS.threshold) * 100);
     $('thresholdValue').textContent = $('threshold').value;
@@ -99,15 +99,65 @@
     showBlocked(stored[STORE.BLOCKED] ?? {});
   }
 
-  // Only the chosen provider's credential field is shown.
-  const FIELD_FOR_PROVIDER = Object.freeze({
-    [PROVIDER.TYPESAFE]: 'apiKey',
-    [PROVIDER.OPENROUTER]: 'openrouterKey',
-    [PROVIDER.SLOPFILTER]: 'pairCode',
+  // The page asks two questions, "your key or mine" and, for your key, "from where".
+  // Together they are the one stored provider.
+  const PLAN = Object.freeze({ OWN: 'own', PAID: 'paid' });
+  const OWN_KEY = Object.freeze({
+    [PROVIDER.TYPESAFE]: {
+      label: 'TypeSafe API key',
+      input: 'apiKey',
+      hint: 'Stays in your browser. Post text goes to TypeSafe for scoring and nowhere else.',
+      getKey: 'https://console.typesafe.ai/keys',
+    },
+    [PROVIDER.OPENROUTER]: {
+      label: 'OpenRouter API key',
+      input: 'openrouterKey',
+      hint: 'Same AI, same answers. Post text goes to OpenRouter, which forwards it to TypeSafe and bills your credits.',
+      getKey: 'https://openrouter.ai/settings/keys',
+    },
   });
+  const checked = (name) => document.querySelector(`input[name="${name}"]:checked`)?.value;
+  const check = (name, value) => {
+    const input = document.querySelector(`input[name="${name}"][value="${value}"]`);
+    if (input) input.checked = true;
+  };
+
+  function providerFromChoice() {
+    if (checked('plan') === PLAN.PAID) return PROVIDER.SLOPFILTER;
+    return Object.hasOwn(OWN_KEY, checked('keyKind')) ? checked('keyKind') : DEFAULTS.provider;
+  }
+
+  // Sets the radios and the visible fields from a stored provider.
+  function showProvider(provider) {
+    const isPaid = provider === PROVIDER.SLOPFILTER;
+    check('plan', isPaid ? PLAN.PAID : PLAN.OWN);
+    // On the paid plan the own-key toggle still needs a position: the key they have.
+    const keyKind = Object.hasOwn(OWN_KEY, provider)
+      ? provider
+      : $('openrouterKey').value && !$('apiKey').value ? PROVIDER.OPENROUTER : PROVIDER.TYPESAFE;
+    check('keyKind', keyKind);
+    showKeyFields();
+  }
+
   function showKeyFields() {
-    const chosen = FIELD_FOR_PROVIDER[$('provider').value] ?? FIELD_FOR_PROVIDER[DEFAULTS.provider];
-    for (const id of Object.values(FIELD_FOR_PROVIDER)) $(id).closest('.field').hidden = id !== chosen;
+    const isPaid = checked('plan') === PLAN.PAID;
+    $('ownKeyField').hidden = isPaid;
+    $('slopfilterField').hidden = !isPaid;
+    const kind = OWN_KEY[checked('keyKind')] ?? OWN_KEY[DEFAULTS.provider];
+    for (const { input } of Object.values(OWN_KEY)) $(input).hidden = input !== kind.input;
+    $('keyLabel').textContent = kind.label;
+    $('keyLabel').htmlFor = kind.input;
+    $('keyHint').replaceChildren(
+      `${kind.hint} `,
+      Object.assign(document.createElement('a'), { href: kind.getKey, target: '_blank', rel: 'noopener noreferrer', textContent: 'Get a key' }),
+      '.',
+    );
+  }
+
+  async function saveProvider() {
+    showKeyFields();
+    await chrome.storage.local.set({ [STORE.PROVIDER]: providerFromChoice() });
+    status(TEXT.SAVED);
   }
 
   function send(message) {
@@ -127,6 +177,7 @@
   function showPairing(isPaired) {
     $('pairRow').hidden = isPaired;
     $('pairedRow').hidden = !isPaired;
+    $('signIn').textContent = isPaired ? TEXT.ACCOUNT_LINK : TEXT.SIGN_IN_LINK;
   }
 
   // Asks the background worker, which holds the token, what the server says about the account.
@@ -298,7 +349,9 @@
     $('thresholdValue').textContent = $('threshold').value;
   });
   FIELDS.forEach(saveOnChange);
-  $('provider').addEventListener('change', showKeyFields);
+  for (const input of document.querySelectorAll('input[name="plan"], input[name="keyKind"]')) {
+    input.addEventListener('change', saveProvider);
+  }
   $('pair').addEventListener('click', pairWithCode);
   $('pairCode').addEventListener('keydown', (event) => {
     if (event.key === 'Enter') pairWithCode();
