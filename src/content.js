@@ -635,8 +635,9 @@
     }
     // New weights change every probability. Features are cached in the worker.
     if (changes[STORE.WEIGHTS]) results.clear();
-    // Turning a kind of item on or off changes what extract returns, so re-decide every element.
-    if (changes[STORE.YOUTUBE_VIDEOS]) {
+    // Turning a kind of item on or off changes what extract returns, so re-decide every
+    // element. Only on a site whose adapter reads settings; the others have nothing to redo.
+    if (changes[STORE.YOUTUBE_VIDEOS] && SITE.settings) {
       for (const element of document.querySelectorAll(SITE.itemSelector)) {
         clear(element);
         delete element.dataset[DATA.ID];
