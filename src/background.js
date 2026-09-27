@@ -65,7 +65,18 @@ async function chosenProvider() {
   return Object.hasOwn(PROVIDERS, stored) ? stored : DEFAULTS.provider;
 }
 
+// Every failure carries the generation the request was made in. Concurrent asks for
+// one post share a request through the cache, so a caller's own generation would lie.
 async function fetchFeatures(post) {
+  const madeIn = generation;
+  try {
+    return await fetchFeaturesNow(post);
+  } catch (error) {
+    throw Object.assign(error, { generation: madeIn });
+  }
+}
+
+async function fetchFeaturesNow(post) {
   const provider = await chosenProvider();
   const { [KEY_FOR[provider]]: apiKey } = await chrome.storage.local.get(KEY_FOR[provider]);
   if (!apiKey) throw Object.assign(new Error(ERROR_NO_KEY[provider]), { noKey: true });
@@ -132,9 +143,10 @@ function notify({ title, message }) {
 }
 
 // An error that means "stop asking": the account, the key, or a cap. Passing errors
-// (Jev down, a timeout) are not, and the next post simply tries again. `asOf` is the
-// generation the request was made in; a change since then makes the refusal stale.
-async function pauseIfCalledFor(error, asOf) {
+// (Jev down, a timeout) are not, and the next post simply tries again. A refusal of a
+// request made before the provider or a key changed is stale, not a pause.
+async function pauseIfCalledFor(error) {
+  const asOf = error.generation ?? generation;
   if (asOf !== generation) return false;
   const pause = pauseFor(error, await chosenProvider());
   if (!pause) return false;
@@ -186,12 +198,11 @@ async function classify(post) {
   if (isActive(await currentPause())) return PAUSED;
 
   const isFresh = !featureCache.has(post.id);
-  const asOf = generation;
   let answer;
   try {
     answer = await cachedFeatures(post);
   } catch (error) {
-    if (await pauseIfCalledFor(error, asOf)) return PAUSED;
+    if (await pauseIfCalledFor(error)) return PAUSED;
     throw error;
   }
   const { features, asked, usage } = answer;

@@ -301,7 +301,12 @@
   const MAX_TIMER_MS = 2 ** 31 - 1;
   function watchPause() {
     clearTimeout(pauseEnds);
-    if (isPaused()) pauseEnds = setTimeout(rerenderAll, Math.min(pause.until - Date.now(), MAX_TIMER_MS));
+    if (!isPaused()) return;
+    pauseEnds = setTimeout(() => {
+      // Fired early (a clock step, or a wait longer than one timer can hold): wait again.
+      if (isPaused()) return watchPause();
+      rerenderAll();
+    }, Math.min(pause.until - Date.now(), MAX_TIMER_MS));
   }
 
   const BLOCKED = (handle) => ({ blocked: true, handle });

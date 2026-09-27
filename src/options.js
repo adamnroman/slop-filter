@@ -25,7 +25,10 @@
     ACCOUNT_LINK: 'Account',
     NOTICE_SENT: 'Sent. If nothing appeared, check macOS System Settings, Notifications, Google Chrome.',
     NO_CODE: 'Enter the pairing code first.',
-    ACCOUNT_TRIAL: ({ email, trial_posts, trial_limit }) => `Signed in as ${email}. Trial: ${trial_posts} of ${trial_limit} posts used.`,
+    ACCOUNT_TRIAL: ({ email, trial_posts, trial_limit }) =>
+      trial_posts >= trial_limit
+        ? `Signed in as ${email}. Trial used up, and the $3.99 charge didn't go through. Check your card on the account page.`
+        : `Signed in as ${email}. Trial: ${trial_posts} of ${trial_limit} posts used.`,
     ACCOUNT_ACTIVE: ({ email, posts_month }) => `Signed in as ${email}. Subscribed. ${posts_month} posts this month.`,
     ACCOUNT_STATE: ({ email, state }) => `Signed in as ${email}. ${ACCOUNT_STATE_TEXT[state] ?? state}`,
   });
@@ -80,10 +83,19 @@
   function showPause(pause) {
     const isPaused = Boolean(pause) && Date.now() < pause.until;
     $('resume').hidden = !isPaused;
-    if (!isPaused) return;
-    const resumes = ` Resumes ${new Date(pause.until).toLocaleString()}.`;
+    if (!isPaused) {
+      if ($('status').dataset.state === STATUS_STATE.ERROR && $('status').textContent.startsWith(TEXT.PAUSED)) status('');
+      return;
+    }
+    // The server's reset time when there is one; the retry time otherwise.
+    const resumes = ` Resumes ${new Date(pause.resetsAt ?? pause.until).toLocaleString()}.`;
     status(`${TEXT.PAUSED} ${pause.message}${resumes}`, true);
   }
+
+  // A pause can begin or end while this page is open.
+  chrome.storage.onChanged.addListener((changes) => {
+    if (changes[STORE.PAUSE]) showPause(changes[STORE.PAUSE].newValue ?? null);
+  });
 
   // Ends the pause by hand. The next post asks again; if it is refused, it pauses afresh.
   async function resumeNow() {
