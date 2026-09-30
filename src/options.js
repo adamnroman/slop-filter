@@ -29,7 +29,10 @@
       trial_posts >= trial_limit
         ? `Signed in as ${email}. Trial used up, and the $3.99 charge didn't go through. Check your card on the account page.`
         : `Signed in as ${email}. Trial: ${trial_posts} of ${trial_limit} posts used.`,
-    ACCOUNT_ACTIVE: ({ email, posts_month }) => `Signed in as ${email}. Subscribed. ${posts_month} posts this month.`,
+    ACCOUNT_ACTIVE: ({ email, posts_month, complimentary }) =>
+      complimentary
+        ? `Signed in as ${email}. Free account. ${posts_month} posts this month.`
+        : `Signed in as ${email}. Subscribed. ${posts_month} posts this month.`,
     ACCOUNT_STATE: ({ email, state }) => `Signed in as ${email}. ${ACCOUNT_STATE_TEXT[state] ?? state}`,
   });
   // How each server-side account state reads on the page.
