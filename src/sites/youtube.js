@@ -132,8 +132,12 @@
 
   const textOf = (node) => (node ? readText(node).trim() : '');
 
+  // The core hands the settings in. Video cards are items only while the toggle is on.
+  let settings = {};
+  const readSettings = (shared) => (settings = shared);
+
   function extract(element) {
-    if (element.matches(SEL.CARD)) return fromCard(element);
+    if (element.matches(SEL.CARD)) return settings.youtubeVideos === false ? null : fromCard(element);
     return fromComment(element);
   }
 
@@ -174,5 +178,6 @@
     parentText,
     chipHosts,
     loadText,
+    settings: readSettings,
   });
 })();
