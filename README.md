@@ -22,7 +22,13 @@ Today it is a Chrome and Firefox extension that hides AI-generated posts and com
 4. The extension combines the answers into one score with weights. A small script fits those weights from the posts you labeled.
 5. Posts under 5 words are left alone. There is too little to judge.
 
-You bring your own API key: from TypeSafe, or from OpenRouter, which resells the same Jev model and bills your OpenRouter credits. It stays in your browser. Post text is sent to the provider you chose for scoring and nowhere else. See the [privacy policy](PRIVACY.md). 1,000 posts cost about 4 cents.
+Three ways to reach Jev, picked on the options page:
+
+- **Your TypeSafe key.** Free to set up; 1,000 posts cost about 4 cents on your TypeSafe account.
+- **Your OpenRouter key.** Same model, same answers, billed to your OpenRouter credits.
+- **Use mine.** No key of your own. $3.99 a month, 100 posts free with a card on file. Scoring goes through Slop Filter's server, which holds the key and never stores the posts. [Terms](TERMS.md).
+
+With your own key, post text is sent to the provider you chose for scoring and nowhere else, and the key stays in your browser. See the [privacy policy](PRIVACY.md).
 
 ## Install
 
@@ -34,7 +40,7 @@ Read https://raw.githubusercontent.com/adamnroman/slop-filter/main/SKILL.md and 
 
 Your agent clones the repo and walks you through the few clicks Chrome requires. Your API key goes into the extension's options page, never into the chat.
 
-Or do it by hand: clone this repo. For Chrome, open `chrome://extensions`, turn on Developer mode, click Load unpacked, and pick the folder. For Firefox, run `node scripts/zip.mjs firefox`, extract the resulting archive, open `about:debugging#/runtime/this-firefox`, click Load Temporary Add-on, and select the extracted root `manifest.json`. Then open the extension's options and paste your [TypeSafe API key](https://console.typesafe.ai/keys), or pick OpenRouter and paste an [OpenRouter key](https://openrouter.ai/settings/keys).
+Or do it by hand: clone this repo. For Chrome, open `chrome://extensions`, turn on Developer mode, click Load unpacked, and pick the folder. For Firefox, run `node scripts/zip.mjs firefox`, extract the resulting archive, open `about:debugging#/runtime/this-firefox`, click Load Temporary Add-on, and select the extracted root `manifest.json`. Then open the extension's options and paste your [TypeSafe API key](https://console.typesafe.ai/keys), pick OpenRouter and paste an [OpenRouter key](https://openrouter.ai/settings/keys), or pick "Use mine", sign in, and pair the browser with the code the account page shows.
 
 ## Tune it and contribute
 

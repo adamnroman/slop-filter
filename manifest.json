@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Slop Filter",
-  "version": "0.8.1.1",
+  "version": "0.8.1.10",
   "description": "Hides AI-generated posts, comments, and videos on X, LinkedIn, Reddit, and YouTube. Scored by TypeSafe Jev.",
   "icons": {
     "16": "assets/icons/icon-16.png",
@@ -10,11 +10,13 @@
     "128": "assets/icons/icon-128.png"
   },
   "permissions": [
-    "storage"
+    "storage",
+    "notifications"
   ],
   "host_permissions": [
     "https://api.typesafe.ai/*",
-    "https://openrouter.ai/api/*"
+    "https://openrouter.ai/api/*",
+    "https://slop-filter-api.adamnroman.workers.dev/*"
   ],
   "background": {
     "service_worker": "src/background.js",

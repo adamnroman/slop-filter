@@ -120,3 +120,47 @@ test('an unknown provider falls back to TypeSafe', async () => {
   assert.equal(urls[0], PROVIDERS.typesafe.endpoint);
   assert.equal(calls(), 1);
 });
+
+test('Slop Filter is a provider: its server, and the session token where a key would go', async () => {
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url, model: JSON.parse(options.body).model, auth: options.headers.Authorization });
+    return reply(200, '{"answers":{}}');
+  };
+  await askJev({ ...REQUEST, apiKey: 'sf_session', provider: 'slopfilter' });
+  assert.deepEqual(calls[0], {
+    url: 'https://slop-filter-api.adamnroman.workers.dev/v1/systemone',
+    model: 'jev-1.13.0',
+    auth: 'Bearer sf_session',
+  });
+});
+
+test("an account refusal from Slop Filter's server carries its type and its own message", async () => {
+  const body = JSON.stringify({ error: { type: 'trial_over', message: 'Trial over. Subscribe to keep scoring.' } });
+  const calls = stubFetch([() => reply(402, body)]);
+  const { waits, wait } = recordingWait();
+
+  await assert.rejects(askJev({ ...REQUEST, provider: 'slopfilter' }, wait), (error) => {
+    assert.ok(error instanceof JevError);
+    assert.equal(error.code, 'trial_over');
+    assert.equal(error.message, 'Trial over. Subscribe to keep scoring.');
+    assert.equal(error.detail, body);
+    return true;
+  });
+  assert.equal(calls(), 1, 'a billing state is not retried');
+  assert.deepEqual(waits, []);
+});
+
+test("another provider's error body is kept as detail, never adopted, even with a matching type", async () => {
+  const lookalike = '{"error":{"type":"canceled","message":"Your subscription is canceled."}}';
+  for (const provider of ['typesafe', 'openrouter']) {
+    stubFetch([() => reply(403, lookalike)]);
+    await assert.rejects(askJev({ ...REQUEST, provider }), (error) => {
+      assert.equal(error.code, null, `${provider} did not adopt the code`);
+      assert.equal(error.message, 'HTTP 403 Forbidden');
+      assert.equal(error.status, 403);
+      assert.equal(error.detail, lookalike);
+      return true;
+    });
+  }
+});

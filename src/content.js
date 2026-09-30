@@ -13,7 +13,6 @@
     // A chip mounted in the site's own header line (see `chipHosts` in sites/x.js).
     INLINE: 'xaf-inline',
     FLAGGED: 'xaf-flagged',
-    ERROR: 'xaf-error',
     OFFER: 'xaf-offer',
     BUTTON: 'xaf-button',
     // Label controls. Tucked away until the chip is hovered.
@@ -45,7 +44,6 @@
     BLOCK_OFFER: (count, handle) => `${count} posts from ${handle} scored as slop. Block?`,
     BLOCK_YES: 'Block',
     BLOCK_NO: 'Not now',
-    UPSTREAM_ERROR: 'Upstream API error',
     WHY_NOT_ASKED: 'not asked, the post it replies to is unknown:',
     WHY_HARD_RULE: 'gate 2, AI hard rule, decisive alone:',
     WHY_HUMAN_VETO: 'gate 1, human tell, decisive alone:',
@@ -115,6 +113,7 @@
       if (response?.ok) return response.result;
       const error = new Error(response?.error ?? 'No response from background worker');
       error.detail = response?.detail ?? '';
+      error.code = response?.code ?? null;
       throw error;
     });
   }
@@ -263,23 +262,18 @@
     if (isFullRow || !mountInline(element, bar)) element.append(bar);
   }
 
-  // Scoring failed after its retries. The bar says why instead of showing a score.
-  // Nothing is cached, so the post is scored again the next time X rebuilds it.
+  // Scoring failed after its retries: Jev was down, or the request timed out. The post
+  // is left as it is, with the reason in the console. Nothing is cached, so it is scored
+  // again the next time the site rebuilds it. Problems that need the person, such as a
+  // rejected key or a used-up plan, pause the worker instead, with one notification.
   function renderError(element, error) {
     console.warn('[xaf]', error.message, error.detail ?? '');
     clear(element);
-    const bar = document.createElement('div');
-    bar.className = `${CLASS.BAR} ${CLASS.ERROR}`;
-    bar.textContent = `${TEXT.UPSTREAM_ERROR} \u00b7 ${error.message}`;
-    // The raw response body stays in the console. A page script can read a title
-    // attribute, and a provider's error body is not ours to publish there.
-    mount(element, bar, true);
-    element.dataset[DATA.BAR] = 'true';
   }
 
   function render(element, post, result) {
     if (result.blocked) return renderBlocked(element, post);
-    if (result.unscorable) return clear(element);
+    if (result.unscorable || result.paused) return clear(element);
     clear(element);
     const isFlagged = result.p >= settings.threshold;
     const isHidden = isFlagged && !revealed.has(post.id);
@@ -298,6 +292,24 @@
   // A post that cannot be judged: no text could be fetched, or too little of it. It is
   // remembered like any result, so it is not fetched again.
   const UNSCORABLE = Object.freeze({ unscorable: true });
+  // The worker is not asking Jev right now: a used-up plan, a cap, a missing key. It
+  // announced why once. Read from storage so no text is fetched and no scan plays.
+  const PAUSED = Object.freeze({ paused: true });
+  let pause = null;
+  const isPaused = () => Boolean(pause) && Date.now() < pause.until;
+  // When a pause ends by time, the posts on screen are re-decided, so a page that
+  // never rebuilds them (a Reddit thread, one LinkedIn post) is scored without a reload.
+  let pauseEnds;
+  const MAX_TIMER_MS = 2 ** 31 - 1;
+  function watchPause() {
+    clearTimeout(pauseEnds);
+    if (!isPaused()) return;
+    pauseEnds = setTimeout(() => {
+      // Fired early (a clock step, or a wait longer than one timer can hold): wait again.
+      if (isPaused()) return watchPause();
+      rerenderAll();
+    }, Math.min(pause.until - Date.now(), MAX_TIMER_MS));
+  }
 
   const BLOCKED = (handle) => ({ blocked: true, handle });
 
@@ -308,6 +320,7 @@
         results.set(post.id, BLOCKED(post.handle));
         return results.get(post.id);
       }
+      if (isPaused()) return PAUSED;
       // Some sites fetch the text first, such as a video's captions.
       if (SITE.loadText) post.text = await SITE.loadText(post);
       if (isTooShort(post.text)) {
@@ -316,6 +329,9 @@
       }
       post.parentText = SITE.parentText(element, post);
       const result = await send({ type: MSG.CLASSIFY, post, threshold: settings.threshold });
+      // Paused: the worker is not asking Jev right now. Not remembered, so the post is
+      // scored once the pause ends and it comes on screen again.
+      if (result.paused) return result;
       result.handle = post.handle;
       results.set(post.id, result);
       // Once per post per page, the moment the answer lands.
@@ -482,6 +498,12 @@
     let fill;
     try {
       await sleep(delayMs);
+      // Paused: nothing to inspect, so no scan. The post is left as it is.
+      if (isPaused()) {
+        animated.delete(post.id);
+        if (isCurrent()) render(element, post, PAUSED);
+        return;
+      }
       element.dataset[DATA.ANIMATING] = 'true';
       const pending = resultFor(element, post);
       line = await playScan(element, pending);
@@ -495,8 +517,8 @@
         return;
       }
       if (!isCurrent()) return;
-      // Nothing to judge, or an account already blocked: no verdict to play.
-      if (result.unscorable || result.blocked) {
+      // Nothing to judge, an account already blocked, or a pause: no verdict to play.
+      if (result.unscorable || result.blocked || result.paused) {
         render(element, post, result);
         return;
       }
@@ -633,6 +655,12 @@
     for (const key of SETTING_KEYS) {
       if (changes[key]) settings[key] = changes[key].newValue ?? DEFAULTS[key];
     }
+    if (changes[STORE.PAUSE]) {
+      pause = changes[STORE.PAUSE].newValue ?? null;
+      if (isPaused()) console.info('[xaf] paused:', pause.code, pause.message, 'until', new Date(pause.until).toLocaleString());
+      else console.info('[xaf] not paused');
+      watchPause();
+    }
     // New weights change every probability. Features are cached in the worker.
     if (changes[STORE.WEIGHTS]) results.clear();
     // Turning a kind of item on or off changes what extract returns, so re-decide every
@@ -647,8 +675,10 @@
     rerenderAll();
   });
 
-  chrome.storage.local.get(SETTING_KEYS).then((stored) => {
+  chrome.storage.local.get([...SETTING_KEYS, STORE.PAUSE]).then((stored) => {
     for (const key of SETTING_KEYS) if (stored[key] !== undefined) settings[key] = stored[key];
+    pause = stored[STORE.PAUSE] ?? null;
+    watchPause();
     STATS.setEnabled(settings.stats);
     scan();
   });
