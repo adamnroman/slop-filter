@@ -11,6 +11,8 @@
 //                 pill. A host belongs to one item only. Without the hook, with an empty
 //                 list, or when no host fits, the chip floats over a corner of the item.
 //                 A collapsed item's row and an error always go in the item.
+//   settings(shared) -> optional. Called once with the live settings object, so an adapter
+//                 can turn one of its item kinds off from the options page.
 (() => {
   const { readText } = globalThis.XAF_DOM;
 

@@ -33,6 +33,7 @@
     { id: 'mode', key: STORE.MODE, event: 'change', read: (el) => el.value },
     { id: 'labeling', key: STORE.LABELING, event: 'change', read: (el) => el.checked },
     { id: 'stats', key: STORE.STATS, event: 'change', read: (el) => el.checked },
+    { id: 'youtubeVideos', key: STORE.YOUTUBE_VIDEOS, event: 'change', read: (el) => el.checked },
   ]);
 
   let clearNote;
@@ -68,6 +69,7 @@
     $('mode').value = stored[STORE.MODE] ?? DEFAULTS.mode;
     $('labeling').checked = stored[STORE.LABELING] ?? DEFAULTS.labeling;
     $('stats').checked = stored[STORE.STATS] ?? DEFAULTS.stats;
+    $('youtubeVideos').checked = stored[STORE.YOUTUBE_VIDEOS] ?? DEFAULTS.youtubeVideos;
     $('weights').value = stored[STORE.WEIGHTS] ? JSON.stringify(stored[STORE.WEIGHTS], null, 2) : '';
     showLabelCounts(stored[STORE.LABELS] ?? {});
     showBlocked(stored[STORE.BLOCKED] ?? {});

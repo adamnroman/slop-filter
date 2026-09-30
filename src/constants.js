@@ -17,6 +17,7 @@ globalThis.XAF = Object.freeze({
     MODE: 'mode',
     LABELING: 'labeling',
     STATS: 'stats',
+    YOUTUBE_VIDEOS: 'youtubeVideos',
     WEIGHTS: 'weights',
     LABELS: 'labels',
     BLOCKED: 'blocked',
@@ -39,5 +40,8 @@ globalThis.XAF = Object.freeze({
     labeling: true,
     provider: 'typesafe',
     stats: false,
+    // Scoring a video means fetching its captions: two requests to YouTube and about
+    // half a megabyte each. On by default; the toggle is for people who only want comments.
+    youtubeVideos: true,
   }),
 });
