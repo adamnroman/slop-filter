@@ -217,59 +217,65 @@ async function classify(post) {
 }
 
 // Blocked accounts, keyed `site:handle`, and how many of each account's posts were flagged.
-// Read once, kept here, written on change. Every tab asks this worker, so they agree.
+// Storage is the source of truth: the options page writes the block list too (unblock,
+// import). Every write here is a read-modify-write of one key, queued behind the last, so a
+// write never carries a stale copy of a change made elsewhere. The block list is also held
+// here for the IS_BLOCKED read every post makes, and follows storage.
 const blockedKey = (site, handle) => `${site}:${handle}`;
-let accounts = null;
+let blockedPromise = null;
 
-async function loadAccounts() {
-  if (!accounts) {
-    const stored = await chrome.storage.local.get([STORE.BLOCKED, STORE.FLAG_COUNTS]);
-    accounts = { blocked: stored[STORE.BLOCKED] ?? {}, flagCounts: stored[STORE.FLAG_COUNTS] ?? {} };
-  }
-  return accounts;
+function loadBlocked() {
+  blockedPromise ??= chrome.storage.local.get(STORE.BLOCKED).then(
+    (stored) => stored[STORE.BLOCKED] ?? {},
+    (error) => {
+      blockedPromise = null;
+      throw error;
+    },
+  );
+  return blockedPromise;
 }
 
-const saveAccounts = () =>
-  chrome.storage.local.set({ [STORE.BLOCKED]: accounts.blocked, [STORE.FLAG_COUNTS]: accounts.flagCounts });
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes[STORE.BLOCKED]) blockedPromise = Promise.resolve(changes[STORE.BLOCKED].newValue ?? {});
+});
+
+// Storage writes are read-modify-write of one key, so they run one at a time.
+let storageWrites = Promise.resolve();
+
+function updateStored(key, change) {
+  const write = storageWrites.then(async () => {
+    const { [key]: current = {} } = await chrome.storage.local.get(key);
+    const next = change(current);
+    await chrome.storage.local.set({ [key]: next });
+    return next;
+  });
+  storageWrites = write.catch(() => {});
+  return write;
+}
 
 async function isBlocked({ site, handle }) {
-  const { blocked } = await loadAccounts();
-  return Boolean(blocked[blockedKey(site, handle)]);
+  return Boolean((await loadBlocked())[blockedKey(site, handle)]);
 }
 
 async function block({ site, handle }) {
-  await loadAccounts();
-  accounts.blocked[blockedKey(site, handle)] = { site, handle, blocked_at: Date.now() };
-  delete accounts.flagCounts[blockedKey(site, handle)];
-  await saveAccounts();
-}
-
-async function unblock({ key }) {
-  await loadAccounts();
-  delete accounts.blocked[key];
-  await saveAccounts();
+  const key = blockedKey(site, handle);
+  await updateStored(STORE.BLOCKED, (blocked) => ({ ...blocked, [key]: { site, handle, blocked_at: Date.now() } }));
+  await updateStored(STORE.FLAG_COUNTS, ({ [key]: dropped, ...rest }) => rest);
 }
 
 // Counts a flagged post against its account. Returns the count, so the page can offer a
 // block once it reaches the threshold.
 async function countFlag({ site, handle }) {
-  await loadAccounts();
   const key = blockedKey(site, handle);
-  accounts.flagCounts[key] = (accounts.flagCounts[key] ?? 0) + 1;
-  await saveAccounts();
-  return accounts.flagCounts[key];
+  const counts = await updateStored(STORE.FLAG_COUNTS, (counts) => ({ ...counts, [key]: (counts[key] ?? 0) + 1 }));
+  return counts[key];
 }
 
-// Label writes are read-modify-write on one key, so they run one at a time.
-let labelWrites = Promise.resolve();
-
 function saveLabel({ post, features, label }) {
-  labelWrites = labelWrites.then(async () => {
-    const { [STORE.LABELS]: labels = {} } = await chrome.storage.local.get(STORE.LABELS);
-    labels[post.id] = { ...post, features, label, labeled_at: Date.now() };
-    await chrome.storage.local.set({ [STORE.LABELS]: labels });
-  });
-  return labelWrites;
+  return updateStored(STORE.LABELS, (labels) => ({
+    ...labels,
+    [post.id]: { ...post, features, label, labeled_at: Date.now() },
+  }));
 }
 
 // Scores a post and counts a flag against its account. The page checks the block list
@@ -319,8 +325,6 @@ const HANDLERS = {
   [MSG.IS_BLOCKED]: ({ post }) => isBlocked(post),
   [MSG.LABEL]: (message) => saveLabel(message),
   [MSG.BLOCK]: ({ post }) => block(post),
-  [MSG.UNBLOCK]: (message) => unblock(message),
-  [MSG.BLOCKED_LIST]: async () => (await loadAccounts()).blocked,
 };
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
