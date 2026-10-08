@@ -312,13 +312,22 @@
   }
 
   const BLOCKED = (handle) => ({ blocked: true, handle });
+  // Counts block list changes. An IS_BLOCKED answer that was in flight across a change is
+  // not trusted: the worker may have answered from the old list.
+  let blockEpoch = 0;
+  const blockedKeyFor = (handle) => `${SITE.name}:${handle}`;
 
   async function resultFor(element, post) {
     if (!results.has(post.id)) {
       // A blocked account's post is settled before any text is fetched or sent.
-      if (post.handle && (await send({ type: MSG.IS_BLOCKED, post }))) {
-        results.set(post.id, BLOCKED(post.handle));
-        return results.get(post.id);
+      if (post.handle) {
+        const epoch = blockEpoch;
+        const isBlocked = await send({ type: MSG.IS_BLOCKED, post });
+        if (epoch !== blockEpoch) return resultFor(element, post);
+        if (isBlocked) {
+          results.set(post.id, BLOCKED(post.handle));
+          return results.get(post.id);
+        }
       }
       if (isPaused()) return PAUSED;
       // Some sites fetch the text first, such as a video's captions.
@@ -352,6 +361,8 @@
   // The row for a post from a blocked account: no score, no Jev call.
   function renderBlocked(element, post) {
     clear(element);
+    // Nothing to inspect: the scan must not play over the folded row if the mode changes.
+    animated.add(post.id);
     element.dataset[DATA.HIDE] = HIDE.COLLAPSE;
     const bar = document.createElement('div');
     bar.className = `${CLASS.BAR} ${CLASS.FLAGGED}`;
@@ -663,10 +674,19 @@
     }
     // New weights change every probability. Features are cached in the worker.
     if (changes[STORE.WEIGHTS]) results.clear();
-    // The block list changed (an unblock on the options page, a block in another tab):
-    // forget the blocked verdicts so those posts are asked about again.
+    // The block list changed: an unblock on the options page, an import, a block in another
+    // tab. An unblocked account's posts are forgotten so they are asked about again; a newly
+    // blocked account's posts fold, as blockAccount does in the tab that blocked it. Firefox
+    // also reports keys written unchanged, and those change nothing here.
     if (changes[STORE.BLOCKED]) {
-      for (const [id, result] of results) if (result.blocked) results.delete(id);
+      const blocked = changes[STORE.BLOCKED].newValue ?? {};
+      blockEpoch += 1;
+      for (const [id, result] of results) {
+        if (!result.handle) continue;
+        const isBlockedNow = blockedKeyFor(result.handle) in blocked;
+        if (result.blocked && !isBlockedNow) results.delete(id);
+        else if (!result.blocked && isBlockedNow) results.set(id, BLOCKED(result.handle));
+      }
     }
     // Turning a kind of item on or off changes what extract returns, so re-decide every
     // element. Only on a site whose adapter reads settings; the others have nothing to redo.
