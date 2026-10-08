@@ -663,6 +663,11 @@
     }
     // New weights change every probability. Features are cached in the worker.
     if (changes[STORE.WEIGHTS]) results.clear();
+    // The block list changed (an unblock on the options page, a block in another tab):
+    // forget the blocked verdicts so those posts are asked about again.
+    if (changes[STORE.BLOCKED]) {
+      for (const [id, result] of results) if (result.blocked) results.delete(id);
+    }
     // Turning a kind of item on or off changes what extract returns, so re-decide every
     // element. Only on a site whose adapter reads settings; the others have nothing to redo.
     if (changes[STORE.YOUTUBE_VIDEOS] && SITE.settings) {

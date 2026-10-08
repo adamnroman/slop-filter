@@ -6,8 +6,6 @@ globalThis.XAF = Object.freeze({
     LABEL: 'xaf/label',
     IS_BLOCKED: 'xaf/is-blocked',
     BLOCK: 'xaf/block',
-    UNBLOCK: 'xaf/unblock',
-    BLOCKED_LIST: 'xaf/blocked-list',
     ACCOUNT: 'xaf/account',
     PAIR: 'xaf/pair',
     TEST_NOTICE: 'xaf/test-notice',

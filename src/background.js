@@ -229,6 +229,15 @@ async function loadAccounts() {
   return accounts;
 }
 
+// The options page writes the list too (unblock, import), so the copy here follows storage.
+// Without this, an unblock held until the worker restarted, and the next flagged post wrote
+// the stale list back over it.
+chrome.storage.onChanged.addListener((changes) => {
+  if (!accounts) return;
+  if (changes[STORE.BLOCKED]) accounts.blocked = changes[STORE.BLOCKED].newValue ?? {};
+  if (changes[STORE.FLAG_COUNTS]) accounts.flagCounts = changes[STORE.FLAG_COUNTS].newValue ?? {};
+});
+
 const saveAccounts = () =>
   chrome.storage.local.set({ [STORE.BLOCKED]: accounts.blocked, [STORE.FLAG_COUNTS]: accounts.flagCounts });
 
@@ -241,12 +250,6 @@ async function block({ site, handle }) {
   await loadAccounts();
   accounts.blocked[blockedKey(site, handle)] = { site, handle, blocked_at: Date.now() };
   delete accounts.flagCounts[blockedKey(site, handle)];
-  await saveAccounts();
-}
-
-async function unblock({ key }) {
-  await loadAccounts();
-  delete accounts.blocked[key];
   await saveAccounts();
 }
 
@@ -319,8 +322,6 @@ const HANDLERS = {
   [MSG.IS_BLOCKED]: ({ post }) => isBlocked(post),
   [MSG.LABEL]: (message) => saveLabel(message),
   [MSG.BLOCK]: ({ post }) => block(post),
-  [MSG.UNBLOCK]: (message) => unblock(message),
-  [MSG.BLOCKED_LIST]: async () => (await loadAccounts()).blocked,
 };
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

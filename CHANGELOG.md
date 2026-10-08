@@ -4,6 +4,10 @@ Every release of Slop Filter. The format follows [Keep a Changelog](https://keep
 
 ## [Unreleased]
 
+### Fixed
+
+- Unblocking an account on the options page takes effect at once, in open tabs too. Before, the worker kept its own copy of the block list and only re-read it when the extension was reloaded, and the next flagged post wrote the stale copy back, undoing the unblock.
+
 ## [0.9.0] - 2026-09-30
 
 ### Added
